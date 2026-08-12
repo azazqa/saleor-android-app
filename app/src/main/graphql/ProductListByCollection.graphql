@@ -1,0 +1,30 @@
+query ProductListByCollection(
+  $slug: String!
+  $channel: String!
+  $languageCode: LanguageCodeEnum!
+  $first: Int!
+  $after: String
+  $sortBy: ProductOrder
+) {
+  collection(slug: $slug, channel: $channel) {
+    id
+    name
+    slug
+    translation(languageCode: $languageCode) {
+      name
+    }
+    products(first: $first, after: $after, sortBy: $sortBy) {
+      totalCount
+      edges {
+        cursor
+        node {
+          ...ProductListItem
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

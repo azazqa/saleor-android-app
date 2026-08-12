@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Saleor Store</string>
+    <string name="nav_home">홈</string>
+    <string name="nav_categories">카테고리</string>
+    <string name="nav_search">검색</string>
+    <string name="home_hero_title">Premium products with exceptional quality</string>
+    <string name="home_hero_subtitle">Discover our curated collection.</string>
+    <string name="home_featured">Featured</string>
+    <string name="home_categories">Categories</string>
+    <string name="home_view_all">전체 보기</string>
+    <string name="categories_title">카테고리</string>
+    <string name="search_hint">상품 검색</string>
+    <string name="search_empty">검색어를 입력하세요</string>
+    <string name="search_no_results">검색 결과가 없습니다</string>
+    <string name="products_empty">상품이 없습니다</string>
+    <string name="loading">불러오는 중…</string>
+    <string name="error_generic">문제가 발생했습니다</string>
+    <string name="retry">다시 시도</string>
+    <string name="product_unavailable">상품을 찾을 수 없습니다</string>
+    <string name="select_variant">옵션 선택</string>
+    <string name="description">상품 설명</string>
+    <string name="price_unavailable">가격 정보 없음</string>
+</resources>

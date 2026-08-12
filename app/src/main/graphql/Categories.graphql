@@ -1,0 +1,30 @@
+query Categories($first: Int!, $languageCode: LanguageCodeEnum!) {
+  categories(first: $first, level: 0) {
+    edges {
+      node {
+        id
+        name
+        slug
+        translation(languageCode: $languageCode) {
+          name
+        }
+        backgroundImage {
+          url
+          alt
+        }
+        children(first: 20) {
+          edges {
+            node {
+              id
+              name
+              slug
+              translation(languageCode: $languageCode) {
+                name
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,83 @@
+query ProductDetails($slug: String!, $channel: String!, $languageCode: LanguageCodeEnum!) {
+  product(slug: $slug, channel: $channel) {
+    id
+    name
+    slug
+    description
+    translation(languageCode: $languageCode) {
+      name
+      description
+    }
+    thumbnail(size: 1024, format: WEBP) {
+      url
+      alt
+    }
+    media {
+      url(size: 1024, format: WEBP)
+      alt
+      type
+    }
+    category {
+      id
+      name
+      slug
+      translation(languageCode: $languageCode) {
+        name
+      }
+    }
+    pricing {
+      priceRange {
+        start {
+          gross {
+            amount
+            currency
+          }
+        }
+        stop {
+          gross {
+            amount
+            currency
+          }
+        }
+      }
+    }
+    variants {
+      id
+      name
+      quantityAvailable
+      translation(languageCode: $languageCode) {
+        name
+      }
+      media {
+        url(size: 1024, format: WEBP)
+        alt
+        type
+      }
+      pricing {
+        price {
+          gross {
+            amount
+            currency
+          }
+        }
+      }
+      selectionAttributes: attributes(variantSelection: VARIANT_SELECTION) {
+        attribute {
+          id
+          name
+          slug
+          translation(languageCode: $languageCode) {
+            name
+          }
+        }
+        values {
+          name
+          slug
+          translation(languageCode: $languageCode) {
+            name
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+query SearchProducts(
+  $search: String!
+  $channel: String!
+  $languageCode: LanguageCodeEnum!
+  $first: Int!
+  $after: String
+) {
+  products(
+    first: $first
+    after: $after
+    channel: $channel
+    filter: { search: $search }
+  ) {
+    totalCount
+    edges {
+      cursor
+      node {
+        ...ProductListItem
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

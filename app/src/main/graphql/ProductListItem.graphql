@@ -1,0 +1,36 @@
+fragment ProductListItem on Product {
+  id
+  name
+  slug
+  translation(languageCode: $languageCode) {
+    name
+  }
+  pricing {
+    priceRange {
+      start {
+        gross {
+          amount
+          currency
+        }
+      }
+      stop {
+        gross {
+          amount
+          currency
+        }
+      }
+    }
+  }
+  thumbnail(size: 512, format: WEBP) {
+    url
+    alt
+  }
+  category {
+    id
+    name
+    slug
+    translation(languageCode: $languageCode) {
+      name
+    }
+  }
+}
