@@ -1,0 +1,21 @@
+query CurrentUserOrdersPaginated(
+  $first: Int
+  $after: String
+  $languageCode: LanguageCodeEnum!
+) {
+  me {
+    orders(first: $first, after: $after) {
+      totalCount
+      edges {
+        cursor
+        node {
+          ...OrderDetails
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

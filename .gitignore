@@ -1,0 +1,55 @@
+# Gradle
+.gradle/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Kotlin incremental / compiler daemon
+.kotlin/
+
+# Local machine config (SDK path, etc.)
+local.properties
+
+# Android Studio / IntelliJ
+*.iml
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/deploymentTargetSelector.xml
+.idea/deviceManager.xml
+.idea/AndroidProjectSystem.xml
+.idea/compiler.xml
+.idea/gradle.xml
+.idea/misc.xml
+.idea/kotlinc.xml
+.idea/runConfigurations.xml
+.idea/.name
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Android build artifacts
+*.apk
+*.aar
+*.ap_
+*.aab
+*.dex
+*.class
+captures/
+.externalNativeBuild/
+.cxx/
+output.json
+*.hprof
+
+# Logs / crash dumps
+*.log
+hs_err_pid*
+
+# Keystores (keep out of VCS)
+*.jks
+*.keystore
+keystore.properties

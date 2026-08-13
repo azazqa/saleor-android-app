@@ -1,0 +1,10 @@
+mutation TokenRefresh($refreshToken: String!) {
+  tokenRefresh(refreshToken: $refreshToken) {
+    token
+    errors {
+      field
+      message
+      code
+    }
+  }
+}

@@ -1,0 +1,73 @@
+fragment OrderDetails on Order {
+  id
+  number
+  created
+  status
+  statusDisplay
+  paymentStatus
+  paymentStatusDisplay
+  total {
+    gross {
+      amount
+      currency
+    }
+  }
+  subtotal {
+    gross {
+      amount
+      currency
+    }
+  }
+  shippingPrice {
+    gross {
+      amount
+      currency
+    }
+  }
+  shippingAddress {
+    firstName
+    lastName
+    streetAddress1
+    streetAddress2
+    city
+    postalCode
+    country {
+      code
+      country
+    }
+    phone
+  }
+  lines {
+    id
+    productName
+    variantName
+    quantity
+    thumbnail(size: 256, format: WEBP) {
+      url
+    }
+    totalPrice {
+      gross {
+        amount
+        currency
+      }
+    }
+    variant {
+      id
+      name
+      translation(languageCode: $languageCode) {
+        name
+      }
+      product {
+        id
+        name
+        slug
+        translation(languageCode: $languageCode) {
+          name
+        }
+        thumbnail(size: 256, format: WEBP) {
+          url
+        }
+      }
+    }
+  }
+}

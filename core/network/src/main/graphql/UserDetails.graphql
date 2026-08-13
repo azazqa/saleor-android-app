@@ -1,0 +1,11 @@
+fragment UserDetails on User {
+  id
+  email
+  firstName
+  lastName
+  dateJoined
+  avatar(size: 256, format: WEBP) {
+    url
+    alt
+  }
+}

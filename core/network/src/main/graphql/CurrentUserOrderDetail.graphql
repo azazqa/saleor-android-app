@@ -1,0 +1,11 @@
+query CurrentUserOrderDetail($id: ID!, $languageCode: LanguageCodeEnum!) {
+  me {
+    orders(first: 1, where: { ids: [$id] }) {
+      edges {
+        node {
+          ...OrderDetails
+        }
+      }
+    }
+  }
+}
