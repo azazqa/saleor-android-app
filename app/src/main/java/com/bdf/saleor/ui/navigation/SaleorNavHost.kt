@@ -25,7 +25,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,7 +41,6 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.bdf.saleor.R
-import com.bdf.saleor.core.designsystem.R as DesignR
 import com.bdf.saleor.core.network.BuildConfig
 import com.bdf.saleor.data.model.AuthState
 import com.bdf.saleor.ui.account.AccountRoute
@@ -58,9 +56,11 @@ import com.bdf.saleor.ui.category.CategoryListScreen
 import com.bdf.saleor.ui.components.StorefrontTopBar
 import com.bdf.saleor.ui.detail.ProductDetailScreen
 import com.bdf.saleor.ui.detail.ProductDetailViewModel
+import com.bdf.saleor.ui.cart.CartRoute
+import com.bdf.saleor.ui.checkout.CheckoutCompleteScreen
+import com.bdf.saleor.ui.checkout.CheckoutRoute
 import com.bdf.saleor.ui.home.HomeScreen
 import com.bdf.saleor.ui.search.SearchScreen
-import kotlinx.coroutines.launch
 
 private enum class TopLevelDestination(
     val key: NavKey,
@@ -84,9 +84,8 @@ fun SaleorApp(
     val authState by chromeViewModel.authState.collectAsStateWithLifecycle()
     val currentUser by chromeViewModel.currentUser.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     var menuOpen by remember { mutableStateOf(false) }
-    val cartMessage = stringResource(DesignR.string.cart_coming_soon)
+    val cartQuantity by chromeViewModel.cartQuantity.collectAsStateWithLifecycle()
     var selectedTopLevel by remember { mutableStateOf(TopLevelDestination.HOME) }
 
     LaunchedEffect(current) {
@@ -136,9 +135,10 @@ fun SaleorApp(
                 onStoreNameClick = { goTo(Home) },
                 onAccountClick = { goTo(Account) },
                 onCartClick = {
-                    scope.launch { snackbarHostState.showSnackbar(cartMessage) }
+                    if (current !is Cart) backStack.add(Cart)
                 },
                 onMenuClick = { menuOpen = true },
+                cartQuantity = cartQuantity,
             )
             Box(modifier = Modifier.weight(1f)) {
                 NavDisplay(
@@ -232,6 +232,32 @@ fun SaleorApp(
                             OrderDetailScreen(
                                 viewModel = viewModel,
                                 onBack = { backStack.removeLastOrNull() },
+                            )
+                        }
+                        entry<Cart> {
+                            CartRoute(
+                                onBack = { backStack.removeLastOrNull() },
+                                onCheckout = { backStack.add(Checkout) },
+                            )
+                        }
+                        entry<Checkout> {
+                            CheckoutRoute(
+                                onBack = { backStack.removeLastOrNull() },
+                                onCompleted = { orderId, orderNumber ->
+                                    backStack.removeLastOrNull()
+                                    backStack.add(CheckoutComplete(orderId, orderNumber))
+                                },
+                            )
+                        }
+                        entry<CheckoutComplete> { key ->
+                            CheckoutCompleteScreen(
+                                orderId = key.orderId,
+                                orderNumber = key.orderNumber,
+                                onHome = { goTo(Home) },
+                                onViewOrder = { orderId ->
+                                    backStack.removeLastOrNull()
+                                    backStack.add(OrderDetail(orderId))
+                                },
                             )
                         }
                     },

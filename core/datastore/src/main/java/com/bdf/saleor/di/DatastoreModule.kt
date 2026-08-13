@@ -5,6 +5,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
+import com.bdf.saleor.core.datastore.CheckoutStore
+import com.bdf.saleor.core.datastore.DataStoreCheckoutStore
 import com.bdf.saleor.core.datastore.DataStoreTokenStore
 import com.bdf.saleor.core.datastore.TokenStore
 import dagger.Binds
@@ -35,4 +37,8 @@ abstract class DatastoreBindsModule {
     @Binds
     @Singleton
     abstract fun bindTokenStore(impl: DataStoreTokenStore): TokenStore
+
+    @Binds
+    @Singleton
+    abstract fun bindCheckoutStore(impl: DataStoreCheckoutStore): CheckoutStore
 }

@@ -1,0 +1,16 @@
+mutation CheckoutLinesDelete(
+  $id: ID!
+  $lineIds: [ID!]!
+  $languageCode: LanguageCodeEnum!
+) {
+  checkoutLinesDelete(id: $id, linesIds: $lineIds) {
+    checkout {
+      ...CheckoutDetails
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}

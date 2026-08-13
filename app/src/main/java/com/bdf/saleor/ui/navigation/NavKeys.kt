@@ -36,3 +36,12 @@ data object Orders : NavKey
 
 @Serializable
 data class OrderDetail(val id: String) : NavKey
+
+@Serializable
+data object Cart : NavKey
+
+@Serializable
+data object Checkout : NavKey
+
+@Serializable
+data class CheckoutComplete(val orderId: String, val orderNumber: String = "") : NavKey

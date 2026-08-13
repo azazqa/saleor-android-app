@@ -99,6 +99,30 @@ class CatalogNavigationTest {
     }
 
     @Test
+    fun addToCart_opensCartAndUpdatesQuantity() {
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodesWithTag("home_screen").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("product_card_tea").assertIsDisplayed().performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodesWithTag("product_detail_screen").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("add_to_cart").performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodesWithTag("storefront_cart_badge").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("storefront_cart").performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodesWithTag("cart_screen").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("cart_screen").assertIsDisplayed()
+        composeRule.onNodeWithTag("cart_line_v1").assertIsDisplayed()
+        composeRule.onNodeWithTag("cart_qty").assertIsDisplayed()
+        composeRule.onNodeWithTag("cart_qty_increase").performClick()
+        composeRule.onNodeWithTag("cart_checkout").assertIsDisplayed()
+    }
+
+    @Test
     fun storefrontLogo_navigatesToHome() {
         composeRule.waitUntil(5_000) {
             composeRule.onAllNodesWithTag("home_screen").fetchSemanticsNodes().isNotEmpty()

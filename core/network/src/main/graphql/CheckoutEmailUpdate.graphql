@@ -1,0 +1,12 @@
+mutation CheckoutEmailUpdate($id: ID!, $email: String!, $languageCode: LanguageCodeEnum!) {
+  checkoutEmailUpdate(id: $id, email: $email) {
+    checkout {
+      ...CheckoutDetails
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}

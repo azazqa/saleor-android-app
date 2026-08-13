@@ -1,0 +1,21 @@
+mutation CheckoutBillingAddressUpdate(
+  $id: ID!
+  $billingAddress: AddressInput!
+  $saveAddress: Boolean
+  $languageCode: LanguageCodeEnum!
+) {
+  checkoutBillingAddressUpdate(
+    id: $id
+    billingAddress: $billingAddress
+    saveAddress: $saveAddress
+  ) {
+    checkout {
+      ...CheckoutDetails
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}

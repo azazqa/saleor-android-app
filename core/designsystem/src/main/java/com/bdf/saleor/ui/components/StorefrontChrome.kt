@@ -41,6 +41,7 @@ fun StorefrontTopBar(
     onAccountClick: () -> Unit,
     onCartClick: () -> Unit,
     onMenuClick: () -> Unit,
+    cartQuantity: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -96,15 +97,30 @@ fun StorefrontTopBar(
                         )
                     }
                 }
-                IconButton(
-                    onClick = onCartClick,
-                    modifier = Modifier.testTag("storefront_cart"),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.ShoppingBag,
-                        contentDescription = stringResource(R.string.cart),
-                        tint = MaterialTheme.colorScheme.onBackground,
-                    )
+                Box {
+                    IconButton(
+                        onClick = onCartClick,
+                        modifier = Modifier.testTag("storefront_cart"),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.ShoppingBag,
+                            contentDescription = stringResource(R.string.cart),
+                            tint = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                    if (cartQuantity > 0) {
+                        Text(
+                            text = if (cartQuantity > 99) "99+" else cartQuantity.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                                .testTag("storefront_cart_badge"),
+                        )
+                    }
                 }
                 IconButton(
                     onClick = onMenuClick,

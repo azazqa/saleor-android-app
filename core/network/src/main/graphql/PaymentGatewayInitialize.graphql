@@ -1,0 +1,18 @@
+mutation PaymentGatewayInitialize($id: ID!, $paymentGateways: [PaymentGatewayToInitialize!]) {
+  paymentGatewayInitialize(id: $id, paymentGateways: $paymentGateways) {
+    gatewayConfigs {
+      id
+      data
+      errors {
+        field
+        message
+        code
+      }
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}

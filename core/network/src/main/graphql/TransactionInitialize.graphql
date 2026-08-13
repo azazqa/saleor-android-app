@@ -1,0 +1,25 @@
+mutation TransactionInitialize(
+  $id: ID!
+  $paymentGateway: PaymentGatewayToInitialize!
+  $amount: PositiveDecimal
+) {
+  transactionInitialize(id: $id, paymentGateway: $paymentGateway, amount: $amount) {
+    transaction {
+      id
+      authorizedAmount {
+        amount
+        currency
+      }
+    }
+    transactionEvent {
+      message
+      type
+    }
+    data
+    errors {
+      field
+      message
+      code
+    }
+  }
+}

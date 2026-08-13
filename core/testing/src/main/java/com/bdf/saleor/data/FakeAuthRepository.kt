@@ -2,6 +2,7 @@ package com.bdf.saleor.data
 
 import com.bdf.saleor.data.model.AuthResult
 import com.bdf.saleor.data.model.AuthState
+import com.bdf.saleor.data.model.Money
 import com.bdf.saleor.data.model.UserProfile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +18,7 @@ class FakeAuthRepository(
         lastName = "User",
         avatarUrl = null,
         dateJoined = "2024-01-01T00:00:00+00:00",
+        pointsBalance = Money(5_000.0, "KRW"),
     )
     var shouldFailLogin: Boolean = false
     var shouldFailRegister: Boolean = false

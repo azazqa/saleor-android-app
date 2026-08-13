@@ -1,0 +1,21 @@
+mutation CheckoutShippingAddressUpdate(
+  $id: ID!
+  $shippingAddress: AddressInput!
+  $saveAddress: Boolean
+  $languageCode: LanguageCodeEnum!
+) {
+  checkoutShippingAddressUpdate(
+    id: $id
+    shippingAddress: $shippingAddress
+    saveAddress: $saveAddress
+  ) {
+    checkout {
+      ...CheckoutDetails
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}

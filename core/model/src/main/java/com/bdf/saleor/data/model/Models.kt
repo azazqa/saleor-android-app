@@ -247,3 +247,98 @@ data class OrderPage(
     val hasNextPage: Boolean,
     val totalCount: Int?,
 )
+
+data class CartLine(
+    val id: String,
+    val variantId: String,
+    val productName: String,
+    val variantName: String,
+    val thumbnailUrl: String?,
+    val quantity: Int,
+    val unitPrice: Money?,
+    val totalPrice: Money?,
+)
+
+data class Cart(
+    val id: String,
+    val lines: List<CartLine>,
+    val subtotal: Money?,
+    val shipping: Money?,
+    val total: Money?,
+    val quantity: Int,
+)
+
+data class DeliveryOption(
+    val id: String,
+    val shippingMethodId: String,
+    val name: String,
+    val price: Money?,
+    val minDeliveryDays: Int?,
+    val maxDeliveryDays: Int?,
+    val active: Boolean = true,
+)
+
+data class PaymentGatewayInfo(
+    val id: String,
+    val name: String,
+    val currencies: List<String> = emptyList(),
+    val config: Map<String, String> = emptyMap(),
+)
+
+enum class CheckoutAuthorizeStatus {
+    NONE,
+    PARTIAL,
+    FULL,
+    UNKNOWN,
+}
+
+data class CheckoutSession(
+    val id: String,
+    val email: String?,
+    val lines: List<CartLine>,
+    val quantity: Int,
+    val subtotal: Money?,
+    val shipping: Money?,
+    val discount: Money?,
+    val total: Money?,
+    val totalBalance: Money?,
+    val shippingAddress: Address?,
+    val billingAddress: Address?,
+    val isShippingRequired: Boolean,
+    val selectedDeliveryMethodId: String?,
+    val authorizeStatus: CheckoutAuthorizeStatus,
+    val availablePaymentGateways: List<PaymentGatewayInfo>,
+    val channelSlug: String?,
+) {
+    fun toCart(): Cart = Cart(
+        id = id,
+        lines = lines,
+        subtotal = subtotal,
+        shipping = shipping,
+        total = total,
+        quantity = quantity,
+    )
+}
+
+data class CompletedOrder(
+    val id: String,
+    val number: String,
+)
+
+data class PaymentResult(
+    val success: Boolean,
+    val message: String? = null,
+    val transactionId: String? = null,
+    val orderId: String? = null,
+    val orderName: String? = null,
+    val amount: Double? = null,
+    val currency: String? = null,
+    val customerKey: String? = null,
+    val clientKey: String? = null,
+    val authorizedAmount: Double? = null,
+)
+
+object PaymentGateways {
+    const val TOSS = "klms.app.payment.tosspayments"
+    const val POINTS = "saleor.io.points-payment-gateway"
+}

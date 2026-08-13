@@ -53,6 +53,7 @@ android {
 apollo {
     service("service") {
         packageName.set("com.bdf.saleor.graphql")
+        mapScalar("JSON", "kotlin.Any")
         introspection {
             endpointUrl.set(saleorApiUrl)
             schemaFile.set(file("src/main/graphql/schema.graphqls"))

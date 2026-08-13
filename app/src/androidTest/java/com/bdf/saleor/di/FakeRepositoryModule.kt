@@ -3,10 +3,14 @@ package com.bdf.saleor.di
 import com.bdf.saleor.core.network.AccessTokenProvider
 import com.bdf.saleor.data.AccountRepository
 import com.bdf.saleor.data.AuthRepository
+import com.bdf.saleor.data.CartRepository
 import com.bdf.saleor.data.CatalogRepository
+import com.bdf.saleor.data.CheckoutRepository
 import com.bdf.saleor.data.FakeAccountRepository
 import com.bdf.saleor.data.FakeAuthRepository
+import com.bdf.saleor.data.FakeCartRepository
 import com.bdf.saleor.data.FakeCatalogRepository
+import com.bdf.saleor.data.FakeCheckoutRepository
 import com.bdf.saleor.data.FakeOrderRepository
 import com.bdf.saleor.data.OrderRepository
 import dagger.Module
@@ -36,6 +40,14 @@ object FakeRepositoryModule {
     @Provides
     @Singleton
     fun provideAccountRepository(): AccountRepository = FakeAccountRepository()
+
+    @Provides
+    @Singleton
+    fun provideCartRepository(): CartRepository = FakeCartRepository()
+
+    @Provides
+    @Singleton
+    fun provideCheckoutRepository(): CheckoutRepository = FakeCheckoutRepository()
 
     @Provides
     @Singleton

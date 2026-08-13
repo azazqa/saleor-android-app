@@ -1,0 +1,16 @@
+mutation CheckoutLinesUpdate(
+  $id: ID!
+  $lines: [CheckoutLineUpdateInput!]!
+  $languageCode: LanguageCodeEnum!
+) {
+  checkoutLinesUpdate(id: $id, lines: $lines) {
+    checkout {
+      ...CheckoutDetails
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}

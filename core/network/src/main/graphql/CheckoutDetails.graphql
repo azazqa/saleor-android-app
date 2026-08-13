@@ -1,0 +1,146 @@
+fragment CheckoutMoney on Money {
+  amount
+  currency
+}
+
+fragment CheckoutAddress on Address {
+  id
+  firstName
+  lastName
+  companyName
+  streetAddress1
+  streetAddress2
+  city
+  cityArea
+  postalCode
+  country {
+    code
+    country
+  }
+  countryArea
+  phone
+  isDefaultShippingAddress
+  isDefaultBillingAddress
+}
+
+fragment CheckoutLineDetails on CheckoutLine {
+  id
+  quantity
+  totalPrice {
+    gross {
+      ...CheckoutMoney
+    }
+  }
+  unitPrice {
+    gross {
+      ...CheckoutMoney
+    }
+  }
+  variant {
+    id
+    name
+    translation(languageCode: $languageCode) {
+      name
+    }
+    product {
+      id
+      name
+      slug
+      translation(languageCode: $languageCode) {
+        name
+      }
+      thumbnail(size: 256, format: WEBP) {
+        url
+        alt
+      }
+    }
+    pricing {
+      price {
+        gross {
+          ...CheckoutMoney
+        }
+      }
+    }
+    selectionAttributes: attributes(variantSelection: VARIANT_SELECTION) {
+      attribute {
+        name
+        slug
+        translation(languageCode: $languageCode) {
+          name
+        }
+      }
+      values {
+        name
+        slug
+        translation(languageCode: $languageCode) {
+          name
+        }
+      }
+    }
+  }
+}
+
+fragment CheckoutDetails on Checkout {
+  id
+  email
+  quantity
+  isShippingRequired
+  authorizeStatus
+  voucherCode
+  discountName
+  channel {
+    slug
+  }
+  discount {
+    ...CheckoutMoney
+  }
+  totalBalance {
+    ...CheckoutMoney
+  }
+  subtotalPrice {
+    gross {
+      ...CheckoutMoney
+    }
+  }
+  shippingPrice {
+    gross {
+      ...CheckoutMoney
+    }
+  }
+  totalPrice {
+    gross {
+      ...CheckoutMoney
+    }
+  }
+  shippingAddress {
+    ...CheckoutAddress
+  }
+  billingAddress {
+    ...CheckoutAddress
+  }
+  delivery {
+    id
+    shippingMethod {
+      id
+      name
+    }
+  }
+  availablePaymentGateways {
+    id
+    name
+    currencies
+    config {
+      field
+      value
+    }
+  }
+  lines {
+    ...CheckoutLineDetails
+  }
+}
+
+query CheckoutDetails($id: ID!, $languageCode: LanguageCodeEnum!) {
+  checkout(id: $id) {
+    ...CheckoutDetails
+  }
+}

@@ -1,5 +1,6 @@
 package com.bdf.saleor.ui.detail
 
+import com.bdf.saleor.data.FakeCartRepository
 import com.bdf.saleor.data.FakeCatalogRepository
 import com.bdf.saleor.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,6 +22,7 @@ class ProductDetailViewModelTest {
     fun refresh_success_selectsFirstVariant() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = ProductDetailViewModel(
             repository = FakeCatalogRepository(),
+            cartRepository = FakeCartRepository(),
             slug = "tea",
         )
 
@@ -39,6 +41,7 @@ class ProductDetailViewModelTest {
     fun selectVariant_updatesPrice() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = ProductDetailViewModel(
             repository = FakeCatalogRepository(),
+            cartRepository = FakeCartRepository(),
             slug = "tea",
         )
         advanceUntilIdle()
@@ -55,11 +58,30 @@ class ProductDetailViewModelTest {
         val repository = FakeCatalogRepository().apply { productDetail = null }
         val viewModel = ProductDetailViewModel(
             repository = repository,
+            cartRepository = FakeCartRepository(),
             slug = "missing",
         )
 
         advanceUntilIdle()
 
         assertEquals("not_found", viewModel.uiState.value.error)
+    }
+
+    @Test
+    fun addToCart_usesSelectedVariant() = runTest(mainDispatcherRule.dispatcher) {
+        val cart = FakeCartRepository()
+        val viewModel = ProductDetailViewModel(
+            repository = FakeCatalogRepository(),
+            cartRepository = cart,
+            slug = "tea",
+        )
+        advanceUntilIdle()
+
+        viewModel.addToCart()
+        advanceUntilIdle()
+
+        assertEquals("v1", cart.lastAddedVariantId)
+        assertEquals("added", viewModel.uiState.value.addToCartMessage)
+        assertEquals(1, cart.cart.value?.quantity)
     }
 }

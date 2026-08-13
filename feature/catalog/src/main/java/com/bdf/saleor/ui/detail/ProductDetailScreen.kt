@@ -18,12 +18,17 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,9 +51,18 @@ fun ProductDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val addedMessage = stringResource(R.string.added_to_cart)
 
+    LaunchedEffect(state.addToCartMessage) {
+        val message = state.addToCartMessage ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(if (message == "added") addedMessage else message)
+        viewModel.consumeAddToCartMessage()
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .testTag("product_detail_screen"),
     ) {
@@ -121,6 +135,16 @@ fun ProductDetailScreen(
                                 }
                             }
                         }
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Button(
+                            onClick = viewModel::addToCart,
+                            enabled = !state.addingToCart && state.selectedVariant != null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("add_to_cart"),
+                        ) {
+                            Text(stringResource(R.string.add_to_cart))
+                        }
                         if (state.descriptionText.isNotBlank()) {
                             Spacer(modifier = Modifier.height(24.dp))
                             Text(
@@ -138,6 +162,11 @@ fun ProductDetailScreen(
                 }
             }
         }
+    }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
 
