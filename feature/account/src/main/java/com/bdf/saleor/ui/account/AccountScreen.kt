@@ -15,8 +15,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bdf.saleor.core.designsystem.R as DesignR
 import com.bdf.saleor.data.model.AuthState
 import com.bdf.saleor.data.model.OrderSummary
-import com.bdf.saleor.feature.account.R
-import com.bdf.saleor.ui.components.BackTextLink
 import com.bdf.saleor.ui.components.ErrorState
 import com.bdf.saleor.ui.components.LoadingState
 
@@ -24,7 +22,6 @@ import com.bdf.saleor.ui.components.LoadingState
 fun AccountRoute(
     onRegisterClick: () -> Unit,
     onForgotPasswordClick: () -> Unit,
-    onBackToStore: () -> Unit,
     onOrderClick: (OrderSummary) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AccountViewModel = hiltViewModel(),
@@ -39,7 +36,6 @@ fun AccountRoute(
         )
         is AuthState.LoggedIn -> AccountShell(
             viewModel = viewModel,
-            onBackToStore = onBackToStore,
             onOrderClick = onOrderClick,
             modifier = modifier,
         )
@@ -49,7 +45,6 @@ fun AccountRoute(
 @Composable
 fun AccountShell(
     viewModel: AccountViewModel,
-    onBackToStore: () -> Unit,
     onOrderClick: (OrderSummary) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -61,10 +56,6 @@ fun AccountShell(
             .fillMaxSize()
             .testTag("account_screen"),
     ) {
-        BackTextLink(
-            text = stringResource(R.string.back_to_store),
-            onClick = onBackToStore,
-        )
         AccountTabRow(selected = tab, onSelect = { tab = it })
         when {
             state.isLoading && state.profile == null && tab != AccountTab.Orders -> LoadingState()

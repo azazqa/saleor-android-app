@@ -133,6 +133,7 @@ fun SaleorApp(
             StorefrontTopBar(
                 storeName = stringResource(R.string.app_name),
                 initials = if (authState is AuthState.LoggedIn) currentUser?.initials else null,
+                onStoreNameClick = { goTo(Home) },
                 onAccountClick = { goTo(Account) },
                 onCartClick = {
                     scope.launch { snackbarHostState.showSnackbar(cartMessage) }
@@ -193,7 +194,6 @@ fun SaleorApp(
                             AccountRoute(
                                 onRegisterClick = { backStack.add(Register) },
                                 onForgotPasswordClick = { backStack.add(ForgotPassword) },
-                                onBackToStore = { goTo(Home) },
                                 onOrderClick = { order -> backStack.add(OrderDetail(order.id)) },
                             )
                         }

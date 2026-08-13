@@ -40,7 +40,6 @@
     <string name="order_lines">주문 상품</string>
     <string name="order_quantity">수량 %1$d</string>
     <string name="order_not_found">주문을 찾을 수 없습니다</string>
-    <string name="back_to_store">‹ 스토어로 돌아가기</string>
     <string name="back_link">‹ 뒤로</string>
     <string name="tab_overview">개요</string>
     <string name="tab_orders">주문</string>

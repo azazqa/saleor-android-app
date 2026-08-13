@@ -91,4 +91,20 @@ class CatalogNavigationTest {
         composeRule.onNodeWithTag("storefront_top_bar").assertIsDisplayed()
         composeRule.onNodeWithTag("storefront_logo").assertIsDisplayed()
     }
+
+    @Test
+    fun storefrontLogo_navigatesToHome() {
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodesWithTag("home_screen").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("nav_search", useUnmergedTree = true).performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodesWithTag("search_screen").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("storefront_logo").performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodesWithTag("home_screen").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
+    }
 }

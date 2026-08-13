@@ -37,6 +37,7 @@ import com.bdf.saleor.core.designsystem.R
 fun StorefrontTopBar(
     storeName: String,
     initials: String?,
+    onStoreNameClick: () -> Unit,
     onAccountClick: () -> Unit,
     onCartClick: () -> Unit,
     onMenuClick: () -> Unit,
@@ -61,7 +62,10 @@ fun StorefrontTopBar(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.testTag("storefront_logo"),
+                modifier = Modifier
+                    .clickable(onClick = onStoreNameClick)
+                    .testTag("storefront_logo")
+                    .semantics { contentDescription = storeName },
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
