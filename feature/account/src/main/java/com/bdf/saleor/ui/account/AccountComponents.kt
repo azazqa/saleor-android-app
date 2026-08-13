@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.MonetizationOn
@@ -48,6 +50,7 @@ enum class AccountTab {
 fun AccountTabRow(
     selected: AccountTab,
     onSelect: (AccountTab) -> Unit,
+    onLogout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -94,11 +97,18 @@ fun AccountTabRow(
             testTag = "account_tab_settings",
             onClick = { onSelect(AccountTab.Settings) },
         )
+        AccountTabButton(
+            selected = false,
+            icon = Icons.AutoMirrored.Outlined.Logout,
+            label = stringResource(R.string.account_logout),
+            testTag = "account_tab_logout",
+            onClick = onLogout,
+        )
     }
 }
 
 @Composable
-private fun AccountTabButton(
+private fun RowScope.AccountTabButton(
     selected: Boolean,
     icon: ImageVector,
     label: String,
@@ -109,16 +119,17 @@ private fun AccountTabButton(
     val content = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
     Column(
         modifier = Modifier
+            .weight(1f)
             .clip(RoundedCornerShape(12.dp))
             .background(background)
             .clickable(onClick = onClick)
             .testTag(testTag)
-            .padding(horizontal = 8.dp, vertical = 10.dp),
+            .padding(horizontal = 4.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(icon, contentDescription = label, tint = content, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.height(4.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = content)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = content, maxLines = 1)
     }
 }
 

@@ -56,7 +56,11 @@ fun AccountShell(
             .fillMaxSize()
             .testTag("account_screen"),
     ) {
-        AccountTabRow(selected = tab, onSelect = { tab = it })
+        AccountTabRow(
+            selected = tab,
+            onSelect = { tab = it },
+            onLogout = viewModel::logout,
+        )
         when {
             state.isLoading && state.profile == null && tab != AccountTab.Orders -> LoadingState()
             state.error != null && state.profile == null && tab == AccountTab.Overview -> ErrorState(

@@ -79,8 +79,14 @@ class CatalogNavigationTest {
         }
         composeRule.onNodeWithTag("account_screen").assertIsDisplayed()
         composeRule.onNodeWithTag("account_tab_overview", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag("account_tab_logout", useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithTag("account_welcome").assertIsDisplayed()
         composeRule.onNodeWithTag("nav_account", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag("account_tab_logout", useUnmergedTree = true).performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodesWithTag("login_screen").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("login_screen").assertIsDisplayed()
     }
 
     @Test
