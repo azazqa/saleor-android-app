@@ -36,6 +36,8 @@ class CatalogNavigationTest {
             composeRule.onAllNodesWithTag("product_detail_screen").fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithTag("product_detail_name").assertIsDisplayed()
+        composeRule.onNodeWithTag("nav_home", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag("nav_account", useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Back").performClick()
         composeRule.waitUntil(5_000) {
             composeRule.onAllNodesWithTag("home_screen").fetchSemanticsNodes().isNotEmpty()
@@ -78,6 +80,7 @@ class CatalogNavigationTest {
         composeRule.onNodeWithTag("account_screen").assertIsDisplayed()
         composeRule.onNodeWithTag("account_tab_overview", useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithTag("account_welcome").assertIsDisplayed()
+        composeRule.onNodeWithTag("nav_account", useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test

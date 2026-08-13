@@ -21,6 +21,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -86,11 +87,17 @@ fun SaleorApp(
     val scope = rememberCoroutineScope()
     var menuOpen by remember { mutableStateOf(false) }
     val cartMessage = stringResource(DesignR.string.cart_coming_soon)
+    var selectedTopLevel by remember { mutableStateOf(TopLevelDestination.HOME) }
 
-    val showBottomBar = when (current) {
-        is Home, is Categories, is Search -> true
-        is Account -> authState !is AuthState.LoggedIn
-        else -> false
+    LaunchedEffect(current) {
+        val next = when (current) {
+            is Home -> TopLevelDestination.HOME
+            is Categories -> TopLevelDestination.CATEGORIES
+            is Search -> TopLevelDestination.SEARCH
+            is Account, is Register, is ForgotPassword, is OrderDetail -> TopLevelDestination.ACCOUNT
+            else -> null
+        }
+        if (next != null) selectedTopLevel = next
     }
 
     fun goTo(destination: NavKey) {
@@ -103,22 +110,22 @@ fun SaleorApp(
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
-            if (showBottomBar) {
-                TopLevelDestination.entries.forEach { destination ->
-                    item(
-                        icon = {
-                            Icon(
-                                destination.icon,
-                                contentDescription = stringResource(destination.labelRes),
-                                modifier = Modifier.testTag(destination.testTag),
-                            )
-                        },
-                        label = { Text(stringResource(destination.labelRes)) },
-                        selected = current == destination.key ||
-                            (destination.key is Home && current is Home),
-                        onClick = { goTo(destination.key) },
-                    )
-                }
+            TopLevelDestination.entries.forEach { destination ->
+                item(
+                    icon = {
+                        Icon(
+                            destination.icon,
+                            contentDescription = stringResource(destination.labelRes),
+                            modifier = Modifier.testTag(destination.testTag),
+                        )
+                    },
+                    label = { Text(stringResource(destination.labelRes)) },
+                    selected = destination == selectedTopLevel,
+                    onClick = {
+                        selectedTopLevel = destination
+                        goTo(destination.key)
+                    },
+                )
             }
         },
     ) {
