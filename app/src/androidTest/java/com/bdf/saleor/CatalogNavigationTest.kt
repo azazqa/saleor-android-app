@@ -76,6 +76,16 @@ class CatalogNavigationTest {
             composeRule.onAllNodesWithTag("account_screen").fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithTag("account_screen").assertIsDisplayed()
-        composeRule.onNodeWithTag("account_email").assertIsDisplayed()
+        composeRule.onNodeWithTag("account_tab_overview", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag("account_welcome").assertIsDisplayed()
+    }
+
+    @Test
+    fun storefrontTopBar_isVisibleOnHome() {
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodesWithTag("home_screen").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("storefront_top_bar").assertIsDisplayed()
+        composeRule.onNodeWithTag("storefront_logo").assertIsDisplayed()
     }
 }

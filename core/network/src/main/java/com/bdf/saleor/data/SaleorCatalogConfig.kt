@@ -21,4 +21,7 @@ data class SaleorCatalogConfig(
 
     val accountConfirmRedirectUrl: String
         get() = "${storefrontUrl.trimEnd('/')}/$locale/$channel/account/confirm"
+
+    val accountDeleteRedirectUrl: String
+        get() = "${storefrontUrl.trimEnd('/')}/$locale/$channel/account"
 }

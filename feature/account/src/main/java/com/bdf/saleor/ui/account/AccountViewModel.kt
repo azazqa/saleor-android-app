@@ -2,8 +2,11 @@ package com.bdf.saleor.ui.account
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bdf.saleor.data.AccountRepository
 import com.bdf.saleor.data.AuthRepository
+import com.bdf.saleor.data.OrderRepository
 import com.bdf.saleor.data.model.AuthState
+import com.bdf.saleor.data.model.OrderSummary
 import com.bdf.saleor.data.model.UserProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -19,6 +22,7 @@ data class AccountUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val profile: UserProfile? = null,
+    val recentOrders: List<OrderSummary> = emptyList(),
     val firstName: String = "",
     val lastName: String = "",
     val oldPassword: String = "",
@@ -26,13 +30,17 @@ data class AccountUiState(
     val confirmPassword: String = "",
     val nameMessage: String? = null,
     val passwordMessage: String? = null,
+    val deleteMessage: String? = null,
     val isSavingName: Boolean = false,
     val isSavingPassword: Boolean = false,
+    val isDeleting: Boolean = false,
 )
 
 @HiltViewModel
 class AccountViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    private val accountRepository: AccountRepository,
+    private val orderRepository: OrderRepository,
 ) : ViewModel() {
     val authState: StateFlow<AuthState> = authRepository.authState.stateIn(
         viewModelScope,
@@ -54,12 +62,18 @@ class AccountViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            runCatching { authRepository.getProfile() }
-                .onSuccess { profile ->
+            runCatching {
+                val profile = authRepository.getProfile()
+                val orders = runCatching { orderRepository.getOrders(first = 3, after = null) }
+                    .getOrNull()
+                profile to orders
+            }
+                .onSuccess { (profile, orders) ->
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             profile = profile,
+                            recentOrders = orders?.items.orEmpty(),
                             firstName = profile?.firstName.orEmpty(),
                             lastName = profile?.lastName.orEmpty(),
                         )
@@ -73,11 +87,11 @@ class AccountViewModel @Inject constructor(
         }
     }
 
-    fun onFirstNameChange(value: String) = _uiState.update { it.copy(firstName = value) }
-    fun onLastNameChange(value: String) = _uiState.update { it.copy(lastName = value) }
-    fun onOldPasswordChange(value: String) = _uiState.update { it.copy(oldPassword = value) }
-    fun onNewPasswordChange(value: String) = _uiState.update { it.copy(newPassword = value) }
-    fun onConfirmPasswordChange(value: String) = _uiState.update { it.copy(confirmPassword = value) }
+    fun onFirstNameChange(value: String) = _uiState.update { it.copy(firstName = value, nameMessage = null) }
+    fun onLastNameChange(value: String) = _uiState.update { it.copy(lastName = value, nameMessage = null) }
+    fun onOldPasswordChange(value: String) = _uiState.update { it.copy(oldPassword = value, passwordMessage = null) }
+    fun onNewPasswordChange(value: String) = _uiState.update { it.copy(newPassword = value, passwordMessage = null) }
+    fun onConfirmPasswordChange(value: String) = _uiState.update { it.copy(confirmPassword = value, passwordMessage = null) }
 
     fun saveName() {
         val state = _uiState.value
@@ -118,6 +132,24 @@ class AccountViewModel @Inject constructor(
                     oldPassword = if (result.success) "" else it.oldPassword,
                     newPassword = if (result.success) "" else it.newPassword,
                     confirmPassword = if (result.success) "" else it.confirmPassword,
+                )
+            }
+        }
+    }
+
+    fun requestDeletion() {
+        if (_uiState.value.isDeleting) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDeleting = true, deleteMessage = null) }
+            val result = accountRepository.requestAccountDeletion()
+            _uiState.update {
+                it.copy(
+                    isDeleting = false,
+                    deleteMessage = result.message ?: if (result.success) {
+                        "삭제 확인 메일을 보냈습니다."
+                    } else {
+                        result.message
+                    },
                 )
             }
         }

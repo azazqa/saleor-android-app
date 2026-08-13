@@ -18,18 +18,10 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -43,10 +35,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.bdf.saleor.core.designsystem.R as DesignR
 import com.bdf.saleor.feature.catalog.R
+import com.bdf.saleor.ui.components.BackTextLink
 import com.bdf.saleor.ui.components.ErrorState
 import com.bdf.saleor.ui.components.LoadingState
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetailScreen(
     viewModel: ProductDetailViewModel,
@@ -55,41 +47,26 @@ fun ProductDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        modifier = modifier.testTag("product_detail_screen"),
-        topBar = {
-            TopAppBar(
-                title = { Text(state.product?.name.orEmpty()) },
-                navigationIcon = {
-                    IconButton(onClick = onBack, modifier = Modifier.testTag("back")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                ),
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { padding ->
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .testTag("product_detail_screen"),
+    ) {
+        BackTextLink(text = stringResource(R.string.back_link), onClick = onBack)
         when {
-            state.isLoading -> LoadingState(modifier = Modifier.padding(padding))
+            state.isLoading -> LoadingState()
             state.error == "not_found" -> ErrorState(
                 message = stringResource(R.string.product_unavailable),
                 onRetry = onBack,
-                modifier = Modifier.padding(padding),
             )
             state.error != null -> ErrorState(
                 message = state.error ?: stringResource(DesignR.string.error_generic),
                 onRetry = viewModel::refresh,
-                modifier = Modifier.padding(padding),
             )
             state.product != null -> {
                 val product = state.product!!
                 Column(
                     modifier = Modifier
-                        .padding(padding)
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState()),
                 ) {

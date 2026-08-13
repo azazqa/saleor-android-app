@@ -5,4 +5,5 @@
     <string name="nav_categories">카테고리</string>
     <string name="nav_search">검색</string>
     <string name="nav_account">내 계정</string>
+    <string name="account_logout">로그아웃</string>
 </resources>

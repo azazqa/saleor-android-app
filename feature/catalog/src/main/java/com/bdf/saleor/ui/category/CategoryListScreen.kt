@@ -14,12 +14,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -37,7 +34,6 @@ import com.bdf.saleor.ui.components.EmptyState
 import com.bdf.saleor.ui.components.ErrorState
 import com.bdf.saleor.ui.components.LoadingState
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryListScreen(
     onCategoryClick: (CategoryItem) -> Unit,
@@ -51,12 +47,10 @@ fun CategoryListScreen(
             .fillMaxSize()
             .testTag("categories_screen"),
     ) {
-        TopAppBar(
-            title = { Text(stringResource(R.string.categories_title)) },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-            ),
+        Text(
+            text = stringResource(R.string.categories_title),
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         )
         when {
             state.isLoading -> LoadingState()

@@ -26,11 +26,17 @@ class FakeAuthRepository(
     private val _authState = MutableStateFlow(initialState)
     override val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
+    private val _currentUser = MutableStateFlow(
+        if (initialState is AuthState.LoggedIn) profile else null,
+    )
+    override val currentUser: StateFlow<UserProfile?> = _currentUser.asStateFlow()
+
     override suspend fun login(email: String, password: String): AuthResult {
         lastLoginEmail = email
         if (shouldFailLogin) return AuthResult(false, "login failed")
-        _authState.value = AuthState.LoggedIn(email)
         profile = profile.copy(email = email)
+        _currentUser.value = profile
+        _authState.value = AuthState.LoggedIn(email)
         return AuthResult(true)
     }
 
@@ -50,13 +56,18 @@ class FakeAuthRepository(
 
     override suspend fun logout() {
         logoutCount += 1
+        _currentUser.value = null
         _authState.value = AuthState.LoggedOut
     }
 
-    override suspend fun getProfile(): UserProfile = profile
+    override suspend fun getProfile(): UserProfile {
+        _currentUser.value = profile
+        return profile
+    }
 
     override suspend fun updateName(firstName: String, lastName: String): AuthResult {
         profile = profile.copy(firstName = firstName, lastName = lastName)
+        _currentUser.value = profile
         return AuthResult(true)
     }
 

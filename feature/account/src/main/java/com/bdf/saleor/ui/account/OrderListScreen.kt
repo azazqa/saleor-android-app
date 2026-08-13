@@ -13,15 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -33,16 +27,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bdf.saleor.core.designsystem.R as DesignR
 import com.bdf.saleor.data.model.OrderSummary
 import com.bdf.saleor.feature.account.R
-import com.bdf.saleor.ui.components.EmptyState
 import com.bdf.saleor.ui.components.ErrorState
 import com.bdf.saleor.ui.components.InfiniteListHandler
 import com.bdf.saleor.ui.components.LoadingState
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrderListScreen(
     onOrderClick: (OrderSummary) -> Unit,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: OrderListViewModel = hiltViewModel(),
 ) {
@@ -60,13 +51,10 @@ fun OrderListScreen(
             .fillMaxSize()
             .testTag("order_list_screen"),
     ) {
-        TopAppBar(
-            title = { Text(stringResource(R.string.orders_title)) },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
-            },
+        Text(
+            text = stringResource(R.string.orders_title),
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
         when {
             state.isLoading -> LoadingState()
@@ -74,7 +62,10 @@ fun OrderListScreen(
                 message = state.error ?: stringResource(DesignR.string.error_generic),
                 onRetry = viewModel::refresh,
             )
-            state.orders.isEmpty() -> EmptyState(message = stringResource(R.string.orders_empty))
+            state.orders.isEmpty() -> DashedEmptyBox(
+                title = stringResource(R.string.orders_none_yet),
+                message = stringResource(R.string.orders_empty),
+            )
             else -> LazyColumn(
                 state = listState,
                 contentPadding = PaddingValues(16.dp),

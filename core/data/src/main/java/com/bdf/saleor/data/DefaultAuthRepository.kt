@@ -6,8 +6,11 @@ import com.apollographql.apollo.cache.normalized.FetchPolicy
 import com.apollographql.apollo.cache.normalized.fetchPolicy
 import com.bdf.saleor.core.datastore.TokenStore
 import com.bdf.saleor.core.network.ApolloCache
+import com.bdf.saleor.data.model.Address
 import com.bdf.saleor.data.model.AuthResult
 import com.bdf.saleor.data.model.AuthState
+import com.bdf.saleor.data.model.MembershipInfo
+import com.bdf.saleor.data.model.Money
 import com.bdf.saleor.data.model.UserProfile
 import com.bdf.saleor.graphql.AccountRegisterMutation
 import com.bdf.saleor.graphql.AccountUpdateMutation
@@ -16,6 +19,7 @@ import com.bdf.saleor.graphql.CurrentUserQuery
 import com.bdf.saleor.graphql.PasswordChangeMutation
 import com.bdf.saleor.graphql.RequestPasswordResetMutation
 import com.bdf.saleor.graphql.TokenCreateMutation
+import com.bdf.saleor.graphql.fragment.AddressDetails
 import com.bdf.saleor.graphql.fragment.UserDetails
 import com.bdf.saleor.graphql.type.AccountInput
 import com.bdf.saleor.graphql.type.AccountRegisterInput
@@ -42,17 +46,22 @@ class DefaultAuthRepository @Inject constructor(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unknown)
     override val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
+    private val _currentUser = MutableStateFlow<UserProfile?>(null)
+    override val currentUser: StateFlow<UserProfile?> = _currentUser.asStateFlow()
+
     init {
         scope.launch { restoreSession() }
     }
 
     private suspend fun restoreSession() {
         if (tokenStore.refreshToken().isNullOrBlank()) {
+            _currentUser.value = null
             _authState.value = AuthState.LoggedOut
             return
         }
         runCatching { fetchCurrentUser() }
             .onSuccess { user ->
+                _currentUser.value = user
                 _authState.value = if (user == null) {
                     AuthState.LoggedOut
                 } else {
@@ -62,6 +71,7 @@ class DefaultAuthRepository @Inject constructor(
             .onFailure {
                 tokenStore.clear()
                 runCatching { apolloCache.clear() }
+                _currentUser.value = null
                 _authState.value = AuthState.LoggedOut
             }
     }
@@ -83,6 +93,7 @@ class DefaultAuthRepository @Inject constructor(
         tokenStore.setAccessToken(token)
         tokenStore.setRefreshToken(refresh)
         val user = runCatching { fetchCurrentUser() }.getOrNull()
+        _currentUser.value = user
         _authState.value = AuthState.LoggedIn(user?.email ?: email.trim())
         return AuthResult(success = true)
     }
@@ -145,10 +156,18 @@ class DefaultAuthRepository @Inject constructor(
     override suspend fun logout() {
         tokenStore.clear()
         runCatching { apolloCache.clear() }
+        _currentUser.value = null
         _authState.value = AuthState.LoggedOut
     }
 
-    override suspend fun getProfile(): UserProfile? = fetchCurrentUserProfile()
+    override suspend fun getProfile(): UserProfile? {
+        val profile = fetchCurrentUserProfile()
+        if (profile != null) {
+            _currentUser.value = profile
+            _authState.value = AuthState.LoggedIn(profile.email)
+        }
+        return profile
+    }
 
     override suspend fun updateName(firstName: String, lastName: String): AuthResult {
         val data = apolloClient.mutation(
@@ -168,9 +187,14 @@ class DefaultAuthRepository @Inject constructor(
                 message = errors.firstOrNull()?.message ?: "이름 수정에 실패했습니다",
             )
         }
-        val email = data.accountUpdate?.user?.userDetails?.email
-        if (!email.isNullOrBlank()) {
-            _authState.value = AuthState.LoggedIn(email)
+        val details = data.accountUpdate?.user?.userDetails
+        if (details != null) {
+            _currentUser.value = (_currentUser.value ?: details.toProfile()).copy(
+                firstName = details.firstName,
+                lastName = details.lastName,
+                email = details.email,
+            )
+            _authState.value = AuthState.LoggedIn(details.email)
         }
         return AuthResult(success = true)
     }
@@ -205,15 +229,59 @@ class DefaultAuthRepository @Inject constructor(
             .fetchPolicy(FetchPolicy.NetworkOnly)
             .execute()
             .dataAssertNoErrors
-        return data.me?.userDetails?.toProfile()
+        val me = data.me ?: return null
+        val details = me.userDetails
+        val membership = me.membership?.let { info ->
+            MembershipInfo(
+                tierName = info.tier?.name,
+                nextTierName = info.nextTier?.name,
+                currentSpend = Money(info.currentSpend.amount, info.currentSpend.currency),
+                amountToNextTier = Money(info.amountToNextTier.amount, info.amountToNextTier.currency),
+                couponCode = info.couponCode,
+                validFrom = info.validFrom?.toString(),
+                validUntil = info.validUntil?.toString(),
+                discountPercentage = info.tier?.discountPercentage,
+            )
+        }
+        return UserProfile(
+            id = details.id,
+            email = details.email,
+            firstName = details.firstName,
+            lastName = details.lastName,
+            avatarUrl = details.avatar?.url,
+            dateJoined = details.dateJoined.toString(),
+            pointsBalance = me.pointsBalance?.let { Money(it.amount, it.currency) },
+            membership = membership,
+            addresses = me.addresses.map { it.addressDetails.toAddress() },
+            defaultShippingAddressId = me.defaultShippingAddress?.id,
+            defaultBillingAddressId = me.defaultBillingAddress?.id,
+        )
     }
 }
 
-private fun UserDetails.toProfile(): UserProfile = UserProfile(
+internal fun UserDetails.toProfile(): UserProfile = UserProfile(
     id = id,
     email = email,
     firstName = firstName,
     lastName = lastName,
     avatarUrl = avatar?.url,
     dateJoined = dateJoined.toString(),
+)
+
+internal fun AddressDetails.toAddress(): Address = Address(
+    id = id,
+    firstName = firstName,
+    lastName = lastName,
+    companyName = companyName,
+    streetAddress1 = streetAddress1,
+    streetAddress2 = streetAddress2,
+    city = city,
+    cityArea = cityArea,
+    postalCode = postalCode,
+    countryCode = country.code,
+    countryName = country.country,
+    countryArea = countryArea,
+    phone = phone.orEmpty(),
+    isDefaultShipping = isDefaultShippingAddress == true,
+    isDefaultBilling = isDefaultBillingAddress == true,
 )

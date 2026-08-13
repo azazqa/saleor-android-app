@@ -1,5 +1,44 @@
 query CurrentUserProfile {
   me {
     ...UserDetails
+    pointsBalance {
+      amount
+      currency
+    }
+    membership {
+      tier {
+        id
+        name
+        discountPercentage
+      }
+      validFrom
+      validUntil
+      couponCode
+      currentSpend {
+        amount
+        currency
+      }
+      nextTier {
+        id
+        name
+        minSpent {
+          amount
+          currency
+        }
+      }
+      amountToNextTier {
+        amount
+        currency
+      }
+    }
+    addresses {
+      ...AddressDetails
+    }
+    defaultShippingAddress {
+      id
+    }
+    defaultBillingAddress {
+      id
+    }
   }
 }

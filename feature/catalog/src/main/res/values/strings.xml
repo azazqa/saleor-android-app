@@ -12,4 +12,5 @@
     <string name="product_unavailable">상품을 찾을 수 없습니다</string>
     <string name="select_variant">옵션 선택</string>
     <string name="description">상품 설명</string>
+    <string name="back_link">‹ 뒤로</string>
 </resources>

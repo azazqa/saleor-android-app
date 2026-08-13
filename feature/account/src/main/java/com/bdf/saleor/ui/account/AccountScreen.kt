@@ -1,41 +1,31 @@
 package com.bdf.saleor.ui.account
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bdf.saleor.core.designsystem.R as DesignR
 import com.bdf.saleor.data.model.AuthState
+import com.bdf.saleor.data.model.OrderSummary
 import com.bdf.saleor.feature.account.R
+import com.bdf.saleor.ui.components.BackTextLink
 import com.bdf.saleor.ui.components.ErrorState
 import com.bdf.saleor.ui.components.LoadingState
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountRoute(
     onRegisterClick: () -> Unit,
     onForgotPasswordClick: () -> Unit,
-    onOrdersClick: () -> Unit,
+    onBackToStore: () -> Unit,
+    onOrderClick: (OrderSummary) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
@@ -47,21 +37,23 @@ fun AccountRoute(
             onForgotPasswordClick = onForgotPasswordClick,
             modifier = modifier,
         )
-        is AuthState.LoggedIn -> AccountScreen(
+        is AuthState.LoggedIn -> AccountShell(
             viewModel = viewModel,
-            onOrdersClick = onOrdersClick,
+            onBackToStore = onBackToStore,
+            onOrderClick = onOrderClick,
             modifier = modifier,
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountScreen(
+fun AccountShell(
     viewModel: AccountViewModel,
-    onOrdersClick: () -> Unit,
+    onBackToStore: () -> Unit,
+    onOrderClick: (OrderSummary) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var tab by rememberSaveable { mutableStateOf(AccountTab.Overview) }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(
@@ -69,116 +61,29 @@ fun AccountScreen(
             .fillMaxSize()
             .testTag("account_screen"),
     ) {
-        TopAppBar(title = { Text(stringResource(R.string.account_title)) })
+        BackTextLink(
+            text = stringResource(R.string.back_to_store),
+            onClick = onBackToStore,
+        )
+        AccountTabRow(selected = tab, onSelect = { tab = it })
         when {
-            state.isLoading -> LoadingState()
-            state.error != null && state.profile == null -> ErrorState(
+            state.isLoading && state.profile == null && tab != AccountTab.Orders -> LoadingState()
+            state.error != null && state.profile == null && tab == AccountTab.Overview -> ErrorState(
                 message = state.error ?: stringResource(DesignR.string.error_generic),
                 onRetry = viewModel::refresh,
             )
-            else -> Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-            ) {
-                Text(
-                    text = state.profile?.email.orEmpty(),
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.testTag("account_email"),
+            else -> when (tab) {
+                AccountTab.Overview -> AccountOverviewTab(
+                    state = state,
+                    onViewPoints = { tab = AccountTab.Points },
+                    onViewOrders = { tab = AccountTab.Orders },
+                    onManageAddress = { tab = AccountTab.Addresses },
+                    onOrderClick = onOrderClick,
                 )
-                if (!state.profile?.dateJoined.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "${stringResource(R.string.account_member_since)}: ${state.profile?.dateJoined}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(stringResource(R.string.account_edit_name), style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = state.firstName,
-                    onValueChange = viewModel::onFirstNameChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.register_first_name)) },
-                    singleLine = true,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = state.lastName,
-                    onValueChange = viewModel::onLastNameChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.register_last_name)) },
-                    singleLine = true,
-                )
-                if (!state.nameMessage.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(state.nameMessage.orEmpty())
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = viewModel::saveName, enabled = !state.isSavingName) {
-                    Text(stringResource(R.string.account_save))
-                }
-
-                Spacer(modifier = Modifier.height(28.dp))
-                Text(stringResource(R.string.account_change_password), style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = state.oldPassword,
-                    onValueChange = viewModel::onOldPasswordChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.account_old_password)) },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = state.newPassword,
-                    onValueChange = viewModel::onNewPasswordChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.account_new_password)) },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = state.confirmPassword,
-                    onValueChange = viewModel::onConfirmPasswordChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.account_confirm_password)) },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                )
-                if (!state.passwordMessage.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(state.passwordMessage.orEmpty())
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = viewModel::changePassword, enabled = !state.isSavingPassword) {
-                    Text(stringResource(R.string.account_change_password))
-                }
-
-                Spacer(modifier = Modifier.height(28.dp))
-                Button(
-                    onClick = onOrdersClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("account_orders"),
-                ) {
-                    Text(stringResource(R.string.account_orders))
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedButton(
-                    onClick = viewModel::logout,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("account_logout"),
-                ) {
-                    Text(stringResource(R.string.account_logout))
-                }
-                Spacer(modifier = Modifier.height(24.dp))
+                AccountTab.Orders -> OrderListScreen(onOrderClick = onOrderClick)
+                AccountTab.Points -> AccountPointsScreen()
+                AccountTab.Addresses -> AccountAddressesScreen()
+                AccountTab.Settings -> AccountSettingsTab(viewModel = viewModel)
             }
         }
     }

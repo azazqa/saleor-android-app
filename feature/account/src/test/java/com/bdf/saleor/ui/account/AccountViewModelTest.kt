@@ -1,6 +1,8 @@
 package com.bdf.saleor.ui.account
 
+import com.bdf.saleor.data.FakeAccountRepository
 import com.bdf.saleor.data.FakeAuthRepository
+import com.bdf.saleor.data.FakeOrderRepository
 import com.bdf.saleor.data.model.AuthState
 import com.bdf.saleor.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,20 +20,24 @@ class AccountViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun loggedIn_loadsProfile() = runTest(mainDispatcherRule.dispatcher) {
-        val repository = FakeAuthRepository(initialState = AuthState.LoggedIn("user@test.com"))
-        val viewModel = AccountViewModel(repository)
+    fun loggedIn_loadsProfileAndRecentOrders() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = AccountViewModel(
+            FakeAuthRepository(initialState = AuthState.LoggedIn("user@test.com")),
+            FakeAccountRepository(),
+            FakeOrderRepository(),
+        )
         advanceUntilIdle()
 
         assertFalse(viewModel.uiState.value.isLoading)
         assertEquals("user@test.com", viewModel.uiState.value.profile?.email)
         assertEquals("Test", viewModel.uiState.value.firstName)
+        assertEquals(1, viewModel.uiState.value.recentOrders.size)
     }
 
     @Test
     fun logout_delegatesToRepository() = runTest(mainDispatcherRule.dispatcher) {
         val repository = FakeAuthRepository(initialState = AuthState.LoggedIn("user@test.com"))
-        val viewModel = AccountViewModel(repository)
+        val viewModel = AccountViewModel(repository, FakeAccountRepository(), FakeOrderRepository())
         advanceUntilIdle()
 
         viewModel.logout()
@@ -39,5 +45,22 @@ class AccountViewModelTest {
 
         assertEquals(1, repository.logoutCount)
         assertTrue(repository.authState.value is AuthState.LoggedOut)
+    }
+
+    @Test
+    fun requestDeletion_setsMessage() = runTest(mainDispatcherRule.dispatcher) {
+        val accountRepository = FakeAccountRepository()
+        val viewModel = AccountViewModel(
+            FakeAuthRepository(initialState = AuthState.LoggedIn("user@test.com")),
+            accountRepository,
+            FakeOrderRepository(),
+        )
+        advanceUntilIdle()
+
+        viewModel.requestDeletion()
+        advanceUntilIdle()
+
+        assertTrue(accountRepository.lastDeleteRequested)
+        assertTrue(viewModel.uiState.value.deleteMessage?.contains("메일") == true)
     }
 }

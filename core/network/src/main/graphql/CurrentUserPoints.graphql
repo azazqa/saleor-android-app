@@ -1,0 +1,37 @@
+query CurrentUserPoints($first: Int, $after: String) {
+  me {
+    id
+    pointsBalance {
+      amount
+      currency
+    }
+    pointsHistories(first: $first, after: $after) {
+      totalCount
+      edges {
+        cursor
+        node {
+          id
+          date
+          type
+          amount {
+            amount
+            currency
+          }
+          balanceAfter {
+            amount
+            currency
+          }
+          reason
+          order {
+            id
+            number
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

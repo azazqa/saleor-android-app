@@ -87,10 +87,112 @@ data class UserProfile(
     val lastName: String,
     val avatarUrl: String?,
     val dateJoined: String?,
+    val pointsBalance: Money? = null,
+    val membership: MembershipInfo? = null,
+    val addresses: List<Address> = emptyList(),
+    val defaultShippingAddressId: String? = null,
+    val defaultBillingAddressId: String? = null,
 ) {
     val displayName: String
         get() = listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ").ifBlank { email }
+
+    val initials: String
+        get() {
+            val first = firstName.trim().firstOrNull()
+            val last = lastName.trim().firstOrNull()
+            return when {
+                first != null && last != null -> "$first$last"
+                first != null -> first.toString()
+                else -> email.take(2).uppercase().ifBlank { "?" }
+            }
+        }
+
+    val welcomeName: String
+        get() = firstName.trim().ifBlank { email.substringBefore("@") }
+
+    val defaultShippingAddress: Address?
+        get() = addresses.firstOrNull { it.id == defaultShippingAddressId }
+            ?: addresses.firstOrNull { it.isDefaultShipping }
 }
+
+data class MembershipInfo(
+    val tierName: String?,
+    val nextTierName: String?,
+    val currentSpend: Money,
+    val amountToNextTier: Money,
+    val couponCode: String?,
+    val validFrom: String?,
+    val validUntil: String?,
+    val discountPercentage: Double?,
+)
+
+data class Address(
+    val id: String,
+    val firstName: String,
+    val lastName: String,
+    val companyName: String,
+    val streetAddress1: String,
+    val streetAddress2: String,
+    val city: String,
+    val cityArea: String,
+    val postalCode: String,
+    val countryCode: String,
+    val countryName: String,
+    val countryArea: String,
+    val phone: String,
+    val isDefaultShipping: Boolean,
+    val isDefaultBilling: Boolean,
+) {
+    fun formattedLines(): List<String> = buildList {
+        val name = listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ")
+        if (name.isNotBlank()) add(name)
+        if (companyName.isNotBlank()) add(companyName)
+        if (streetAddress1.isNotBlank()) add(streetAddress1)
+        if (streetAddress2.isNotBlank()) add(streetAddress2)
+        val cityLine = listOf(postalCode, city, countryArea).filter { it.isNotBlank() }.joinToString(" ")
+        if (cityLine.isNotBlank()) add(cityLine)
+        if (countryName.isNotBlank()) add(countryName)
+        if (phone.isNotBlank()) add(phone)
+    }
+}
+
+data class AddressDraft(
+    val firstName: String = "",
+    val lastName: String = "",
+    val companyName: String = "",
+    val streetAddress1: String = "",
+    val streetAddress2: String = "",
+    val city: String = "",
+    val cityArea: String = "",
+    val postalCode: String = "",
+    val countryCode: String = "KR",
+    val countryArea: String = "",
+    val phone: String = "",
+)
+
+enum class AddressKind {
+    SHIPPING,
+    BILLING,
+}
+
+data class PointsHistoryEntry(
+    val id: String,
+    val date: String,
+    val type: String,
+    val amount: Money,
+    val balanceAfter: Money,
+    val reason: String?,
+    val orderId: String?,
+    val orderNumber: String?,
+)
+
+data class PointsPage(
+    val balance: Money?,
+    val entries: List<PointsHistoryEntry>,
+    val endCursor: String?,
+    val hasNextPage: Boolean,
+    val totalCount: Int,
+)
 
 sealed interface AuthState {
     data object Unknown : AuthState
