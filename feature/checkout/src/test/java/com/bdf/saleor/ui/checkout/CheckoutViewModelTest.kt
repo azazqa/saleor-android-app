@@ -6,6 +6,7 @@ import com.bdf.saleor.data.FakeCheckoutRepository
 import com.bdf.saleor.data.model.Address
 import com.bdf.saleor.data.model.AddressDraft
 import com.bdf.saleor.data.model.AuthState
+import com.bdf.saleor.data.model.CheckoutAuthorizeStatus
 import com.bdf.saleor.data.model.Money
 import com.bdf.saleor.data.model.PaymentGateways
 import com.bdf.saleor.testing.MainDispatcherRule
@@ -82,6 +83,7 @@ class CheckoutViewModelTest {
         val viewModel = viewModel(checkout, auth)
         advanceUntilIdle()
         viewModel.onPointsInputChange("99999")
+        assertEquals("5,000", viewModel.uiState.value.pointsInput)
 
         viewModel.applyPoints()
         advanceUntilIdle()
@@ -89,7 +91,23 @@ class CheckoutViewModelTest {
         assertEquals(PaymentGateways.POINTS, checkout.lastTransactionGateway)
         assertEquals(5_000.0, checkout.lastTransactionAmount ?: -1.0, 0.0)
         assertEquals(5_000.0, viewModel.uiState.value.pointsApplied, 0.0)
-        assertTrue(viewModel.uiState.value.pointsClampNotice)
+        assertEquals("5,000", viewModel.uiState.value.pointsInput)
+    }
+
+    @Test
+    fun applyPoints_belowMinUnit_showsError() = runTest(mainDispatcherRule.dispatcher) {
+        val checkout = FakeCheckoutRepository()
+        val auth = FakeAuthRepository(AuthState.LoggedIn("user@test.com"))
+        val viewModel = viewModel(checkout, auth)
+        advanceUntilIdle()
+        viewModel.onPointsInputChange("50")
+
+        viewModel.applyPoints()
+        advanceUntilIdle()
+
+        assertEquals(null, checkout.lastTransactionGateway)
+        assertTrue(viewModel.uiState.value.error?.contains("100") == true)
+        assertEquals(0.0, viewModel.uiState.value.pointsApplied, 0.0)
     }
 
     @Test
@@ -141,6 +159,71 @@ class CheckoutViewModelTest {
         assertTrue(result.isFailure)
         assertEquals("price_change", result.exceptionOrNull()?.message)
         assertFalse(viewModel.uiState.value.priceChangeMessage.isNullOrBlank())
+    }
+
+    @Test
+    fun prepareTossPayment_recalculatesAmountFromCheckout() = runTest(mainDispatcherRule.dispatcher) {
+        val checkout = FakeCheckoutRepository()
+        val viewModel = viewModel(checkout)
+        advanceUntilIdle()
+        viewModel.onShippingDraftChange(validDraft())
+
+        val result = viewModel.prepareTossPayment()
+
+        assertTrue(result.isSuccess)
+        assertEquals(10_000.0, result.getOrThrow().amount, 0.0)
+        assertEquals(10_000.0, checkout.lastTransactionAmount)
+        assertEquals(10_000.0, viewModel.uiState.value.payAmount ?: -1.0, 0.0)
+        assertFalse(viewModel.uiState.value.isFreeOrder)
+    }
+
+    @Test
+    fun payAmount_pendingPartialZeroBalance_usesOrderTotal() {
+        val state = CheckoutUiState(
+            session = FakeCheckoutRepository.sampleSession(total = 122_000.0).copy(
+                authorizeStatus = CheckoutAuthorizeStatus.PARTIAL,
+                totalBalance = Money(0.0, "KRW"),
+            ),
+        )
+        assertEquals(122_000.0, state.payAmount ?: -1.0, 0.0)
+        assertFalse(state.isFreeOrder)
+    }
+
+    @Test
+    fun payAmount_pendingFullZeroBalance_usesOrderTotal() {
+        val state = CheckoutUiState(
+            session = FakeCheckoutRepository.sampleSession(total = 122_000.0).copy(
+                authorizeStatus = CheckoutAuthorizeStatus.FULL,
+                totalBalance = Money(0.0, "KRW"),
+            ),
+        )
+        assertEquals(122_000.0, state.payAmount ?: -1.0, 0.0)
+        assertFalse(state.isFreeOrder)
+    }
+
+    @Test
+    fun payAmount_zeroListedTotal_fallsBackToLineTotals() {
+        val sample = FakeCheckoutRepository.sampleSession(total = 0.0)
+        val state = CheckoutUiState(
+            session = sample.copy(
+                total = Money(0.0, "KRW"),
+                totalBalance = Money(0.0, "KRW"),
+                authorizeStatus = CheckoutAuthorizeStatus.PARTIAL,
+                subtotal = Money(10_000.0, "KRW"),
+                shipping = Money(3_000.0, "KRW"),
+            ),
+        )
+        assertEquals(13_000.0, state.payAmount ?: -1.0, 0.0)
+    }
+
+    @Test
+    fun payAmount_pointsCoverOrder_isFree() {
+        val state = CheckoutUiState(
+            session = FakeCheckoutRepository.sampleSession(total = 10_000.0),
+            pointsApplied = 10_000.0,
+        )
+        assertEquals(0.0, state.payAmount ?: -1.0, 0.0)
+        assertTrue(state.isFreeOrder)
     }
 
     @Test
@@ -415,6 +498,29 @@ class CheckoutViewModelTest {
 
         viewModel.goBack()
 
+        assertEquals(CheckoutStep.Contact, viewModel.uiState.value.step)
+    }
+
+    @Test
+    fun updateShippingAddress_replacesSelectedAndClosesForm() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.createShippingAddress(validDraft())
+        advanceUntilIdle()
+
+        val selected = viewModel.uiState.value.selectedAddress
+        assertEquals("홍", selected?.firstName)
+        viewModel.openAddressForm(selected)
+        assertTrue(viewModel.uiState.value.showAddressForm)
+
+        viewModel.updateShippingAddress(
+            validDraft().copy(firstName = "수정", streetAddress1 = "새주소로 2"),
+        )
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.showAddressForm)
+        assertEquals("수정", viewModel.uiState.value.selectedAddress?.firstName)
+        assertEquals("새주소로 2", viewModel.uiState.value.selectedAddress?.streetAddress1)
         assertEquals(CheckoutStep.Contact, viewModel.uiState.value.step)
     }
 }

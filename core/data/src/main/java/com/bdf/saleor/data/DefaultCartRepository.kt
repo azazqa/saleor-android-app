@@ -5,6 +5,7 @@ import com.apollographql.apollo.api.Optional
 import com.apollographql.apollo.cache.normalized.FetchPolicy
 import com.apollographql.apollo.cache.normalized.fetchPolicy
 import com.bdf.saleor.core.datastore.CheckoutStore
+import com.bdf.saleor.core.datastore.HeldCartLine
 import com.bdf.saleor.data.model.Cart
 import com.bdf.saleor.graphql.CheckoutCreateMutation
 import com.bdf.saleor.graphql.CheckoutDetailsQuery
@@ -125,6 +126,52 @@ class DefaultCartRepository @Inject constructor(
     override suspend fun clearLocal() {
         checkoutStore.clear(config.channel)
         _cart.value = null
+    }
+
+    override suspend fun parkUnselectedLines(selectedLineIds: Set<String>): Result<Cart> = runCatching {
+        val current = _cart.value ?: error("장바구니가 비어 있습니다")
+        val remaining = current.lines.filter { it.id in selectedLineIds }
+        if (remaining.isEmpty()) error("상품을 선택해 주세요")
+        val parked = current.lines.filter { it.id !in selectedLineIds }
+        checkoutStore.setHeldCartLines(
+            config.channel,
+            parked.map { HeldCartLine(variantId = it.variantId, quantity = it.quantity) },
+        )
+        parked.forEach { line ->
+            removeLine(line.id).getOrThrow()
+        }
+        _cart.value ?: Cart(
+            id = current.id,
+            lines = emptyList(),
+            subtotal = null,
+            shipping = null,
+            total = null,
+            quantity = 0,
+        )
+    }
+
+    override suspend fun restoreParkedLines(): Result<Set<String>> = runCatching {
+        val held = checkoutStore.heldCartLines(config.channel)
+        if (held.isEmpty()) return@runCatching emptySet()
+        checkoutStore.setHeldCartLines(config.channel, emptyList())
+        val restoredLineIds = mutableSetOf<String>()
+        val remaining = mutableListOf<HeldCartLine>()
+        held.forEach { line ->
+            val before = _cart.value?.lines.orEmpty().map { it.id }.toSet()
+            val result = addLine(line.variantId, line.quantity)
+            if (result.isFailure) {
+                remaining += line
+            } else {
+                val added = _cart.value?.lines.orEmpty()
+                    .map { it.id }
+                    .filterNot { it in before }
+                restoredLineIds += added
+            }
+        }
+        if (remaining.isNotEmpty()) {
+            checkoutStore.setHeldCartLines(config.channel, remaining)
+        }
+        restoredLineIds
     }
 
     private suspend fun requireCheckoutId(): String {

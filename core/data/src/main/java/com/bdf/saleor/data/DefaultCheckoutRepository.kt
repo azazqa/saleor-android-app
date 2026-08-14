@@ -234,6 +234,7 @@ class DefaultCheckoutRepository @Inject constructor(
         }
         val order = payload.order ?: error("주문을 완료하지 못했습니다")
         cartRepository.clearLocal()
+        cartRepository.restoreParkedLines()
         CompletedOrder(id = order.id, number = order.number)
     }
 

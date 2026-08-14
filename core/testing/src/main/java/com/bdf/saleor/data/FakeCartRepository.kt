@@ -11,6 +11,8 @@ class FakeCartRepository : CartRepository {
     private val _cart = MutableStateFlow<Cart?>(null)
     override val cart: StateFlow<Cart?> = _cart.asStateFlow()
 
+    var parkedLines: List<Pair<String, Int>> = emptyList()
+    var lastParkedSelectedIds: Set<String>? = null
     var shouldFailAdd: Boolean = false
     var shouldFailUpdate: Boolean = false
     var lastAddedVariantId: String? = null
@@ -78,6 +80,41 @@ class FakeCartRepository : CartRepository {
     override suspend fun clearLocal() {
         clearCount += 1
         _cart.value = null
+    }
+
+    override suspend fun parkUnselectedLines(selectedLineIds: Set<String>): Result<Cart> {
+        val current = _cart.value ?: return Result.failure(IllegalStateException("empty"))
+        val remaining = current.lines.filter { it.id in selectedLineIds }
+        if (remaining.isEmpty()) return Result.failure(IllegalStateException("상품을 선택해 주세요"))
+        lastParkedSelectedIds = selectedLineIds
+        val parked = current.lines.filter { it.id !in selectedLineIds }
+        parkedLines = parked.map { it.variantId to it.quantity }
+        parked.forEach { line -> removeLine(line.id) }
+        return Result.success(
+            _cart.value ?: Cart(
+                id = current.id,
+                lines = emptyList(),
+                subtotal = null,
+                shipping = null,
+                total = null,
+                quantity = 0,
+            ),
+        )
+    }
+
+    override suspend fun restoreParkedLines(): Result<Set<String>> {
+        val toRestore = parkedLines
+        parkedLines = emptyList()
+        val restored = mutableSetOf<String>()
+        toRestore.forEach { (variantId, quantity) ->
+            val before = _cart.value?.lines.orEmpty().map { it.id }.toSet()
+            addLine(variantId, quantity)
+            _cart.value?.lines.orEmpty()
+                .map { it.id }
+                .filterNot { it in before }
+                .forEach { restored += it }
+        }
+        return Result.success(restored)
     }
 
     companion object {

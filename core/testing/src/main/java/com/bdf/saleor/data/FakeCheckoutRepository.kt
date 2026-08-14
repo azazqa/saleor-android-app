@@ -97,6 +97,10 @@ class FakeCheckoutRepository : CheckoutRepository {
                 PaymentResult(success = true, transactionId = "tx-points", authorizedAmount = authorized, amount = authorized),
             )
         }
+        session = session.copy(
+            authorizeStatus = CheckoutAuthorizeStatus.PARTIAL,
+            totalBalance = Money(0.0, session.total?.currency ?: "KRW"),
+        )
         return Result.success(
             PaymentResult(
                 success = true,

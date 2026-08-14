@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,8 +26,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.bdf.saleor.feature.checkout.R
 import com.bdf.saleor.ui.theme.SaleorAppTheme
 import com.tosspayments.paymentsdk.PaymentWidget
+import com.tosspayments.paymentsdk.model.TossPaymentResult
 import com.tosspayments.paymentsdk.view.Agreement
 import com.tosspayments.paymentsdk.view.PaymentMethod
+import java.util.Locale
 
 class TossPaymentActivity : AppCompatActivity() {
     private lateinit var paymentWidget: PaymentWidget
@@ -37,7 +40,7 @@ class TossPaymentActivity : AppCompatActivity() {
         val clientKey = intent.getStringExtra(EXTRA_CLIENT_KEY)
         val orderId = intent.getStringExtra(EXTRA_ORDER_ID).orEmpty()
         val orderName = intent.getStringExtra(EXTRA_ORDER_NAME).orEmpty()
-        val amount = intent.getDoubleExtra(EXTRA_AMOUNT, 0.0)
+        val amount = intent.tossAmountWon()
         val customerKey = intent.getStringExtra(EXTRA_CUSTOMER_KEY)
             ?.takeIf { it.isNotBlank() }
             ?: TossAnonymousCustomerKey
@@ -65,20 +68,14 @@ class TossPaymentActivity : AppCompatActivity() {
                 ) {
                     Text(orderName, style = MaterialTheme.typography.titleLarge)
                     Text(
-                        getString(R.string.checkout_toss_amount, amount.toInt().toString()),
+                        getString(R.string.checkout_toss_amount, "%,d".format(Locale.KOREA, amount)),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     AndroidView(
                         factory = { context ->
                             PaymentMethod(context).also { method ->
-                                paymentWidget.renderPaymentMethods(
-                                    method,
-                                    PaymentMethod.Rendering.Amount(
-                                        value = amount,
-                                        currency = PaymentMethod.Rendering.Currency.KRW,
-                                        country = "KR",
-                                    ),
-                                )
+                                paymentWidget.renderPaymentMethods(method, amount)
+                                runCatching { paymentWidget.updateAmount(amount) }
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -105,7 +102,7 @@ class TossPaymentActivity : AppCompatActivity() {
                                             Intent()
                                                 .putExtra(EXTRA_PAYMENT_KEY, success.paymentKey)
                                                 .putExtra(EXTRA_ORDER_ID, success.orderId)
-                                                .putExtra(EXTRA_AMOUNT, success.amount.toDouble()),
+                                                .putExtra(EXTRA_AMOUNT, success.amount.toInt()),
                                         )
                                         finish()
                                     },
@@ -137,6 +134,23 @@ class TossPaymentActivity : AppCompatActivity() {
                     ) {
                         Text(getString(R.string.checkout_pay))
                     }
+                    OutlinedButton(
+                        onClick = {
+                            if (payBusy) return@OutlinedButton
+                            setResult(
+                                Activity.RESULT_CANCELED,
+                                Intent().putExtra(
+                                    EXTRA_ERROR_MESSAGE,
+                                    getString(R.string.checkout_toss_cancelled),
+                                ),
+                            )
+                            finish()
+                        },
+                        enabled = !payBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(getString(R.string.checkout_cancel))
+                    }
                 }
             }
         }
@@ -158,7 +172,19 @@ class TossPaymentActivity : AppCompatActivity() {
                 .putExtra(EXTRA_CUSTOMER_KEY, request.customerKey)
                 .putExtra(EXTRA_ORDER_ID, request.orderId)
                 .putExtra(EXTRA_ORDER_NAME, request.orderName)
-                .putExtra(EXTRA_AMOUNT, request.amount)
+                .putExtra(EXTRA_AMOUNT, request.amount.toInt())
                 .putExtra(EXTRA_TRANSACTION_ID, request.transactionId)
+    }
+}
+
+internal fun Intent.tossAmountWon(): Int {
+    val raw = extras?.get(TossPaymentActivity.EXTRA_AMOUNT) ?: return 0
+    return when (raw) {
+        is Int -> raw
+        is Long -> raw.toInt()
+        is Double -> raw.toInt()
+        is Float -> raw.toInt()
+        is Number -> raw.toInt()
+        else -> 0
     }
 }

@@ -53,3 +53,5 @@ hs_err_pid*
 *.jks
 *.keystore
 keystore.properties
+
+docs/

@@ -17,10 +17,12 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -112,7 +114,21 @@ fun SaleorApp(
     }
 
     CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
+        val navColors = MaterialTheme.colorScheme
+        val navigationSuiteColors = NavigationSuiteDefaults.colors(
+            navigationBarContainerColor = navColors.surfaceContainer,
+        )
+        val navigationItemColors = NavigationSuiteDefaults.itemColors(
+            navigationBarItemColors = NavigationBarItemDefaults.colors(
+                indicatorColor = navColors.secondaryContainer,
+                selectedIconColor = navColors.onSecondaryContainer,
+                selectedTextColor = navColors.onSecondaryContainer,
+                unselectedIconColor = navColors.onSurfaceVariant,
+                unselectedTextColor = navColors.onSurfaceVariant,
+            ),
+        )
         NavigationSuiteScaffold(
+            navigationSuiteColors = navigationSuiteColors,
             navigationSuiteItems = {
                 TopLevelDestination.entries.forEach { destination ->
                     item(
@@ -125,6 +141,7 @@ fun SaleorApp(
                         },
                         label = { Text(stringResource(destination.labelRes)) },
                         selected = destination == selectedTopLevel,
+                        colors = navigationItemColors,
                         onClick = {
                             selectedTopLevel = destination
                             goTo(destination.key)

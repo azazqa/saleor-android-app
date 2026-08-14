@@ -17,4 +17,8 @@ interface CartRepository {
     suspend fun replace(cart: Cart?)
 
     suspend fun clearLocal()
+
+    suspend fun parkUnselectedLines(selectedLineIds: Set<String>): Result<Cart>
+
+    suspend fun restoreParkedLines(): Result<Set<String>>
 }

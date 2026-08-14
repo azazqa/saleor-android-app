@@ -50,6 +50,7 @@ data class CheckoutUiState(
     val savedAddresses: List<Address> = emptyList(),
     val selectedAddressId: String? = null,
     val showAddressForm: Boolean = false,
+    val editingAddressId: String? = null,
     val useSelectedAddressAsDefault: Boolean = false,
     val deliveryOptions: List<DeliveryOption> = emptyList(),
     val selectedDeliveryMethodId: String? = null,
@@ -70,13 +71,14 @@ data class CheckoutUiState(
     val payAmount: Double?
         get() {
             val checkout = session ?: return null
-            if (pointsApplied > 0) {
-                return max(0.0, (checkout.total?.amount ?: 0.0) - pointsApplied)
-            }
+            val total = checkout.payableTotal() ?: return null
+            val afterPoints = max(0.0, total - pointsApplied)
+            if (afterPoints <= 0.0) return 0.0
             if (checkout.authorizeStatus == CheckoutAuthorizeStatus.PARTIAL) {
-                return checkout.totalBalance?.amount?.let { max(0.0, it) }
+                val balance = checkout.totalBalance?.amount
+                if (balance != null && balance > 0) return min(balance, afterPoints)
             }
-            return checkout.total?.amount
+            return afterPoints
         }
 
     val isFreeOrder: Boolean
@@ -144,7 +146,11 @@ class CheckoutViewModel @Inject constructor(
                             selectedDeliveryMethodId = session.selectedDeliveryMethodId,
                             pointsBalance = pointsBalance,
                             pointsCurrency = user?.pointsBalance?.currency ?: session.total?.currency ?: "KRW",
-                            pointsInput = if (it.pointsInput.isBlank()) maxPoints.toPlainString() else it.pointsInput,
+                            pointsInput = if (it.pointsInput.isBlank()) {
+                                formatGroupedAmount(maxPoints)
+                            } else {
+                                it.pointsInput
+                            },
                             showPointsSection = showPoints,
                             loggedIn = loggedIn,
                         )
@@ -199,9 +205,13 @@ class CheckoutViewModel @Inject constructor(
         _uiState.update { it.copy(useSelectedAddressAsDefault = checked) }
     }
 
-    fun openAddressForm() = _uiState.update { it.copy(showAddressForm = true, error = null) }
+    fun openAddressForm(address: Address? = null) = _uiState.update {
+        it.copy(showAddressForm = true, editingAddressId = address?.id, error = null)
+    }
 
-    fun closeAddressForm() = _uiState.update { it.copy(showAddressForm = false) }
+    fun closeAddressForm() = _uiState.update {
+        it.copy(showAddressForm = false, editingAddressId = null)
+    }
 
     fun reloadCustomerAddresses() {
         if (_uiState.value.showAddressForm) return
@@ -256,6 +266,7 @@ class CheckoutViewModel @Inject constructor(
                     it.copy(
                         payBusy = true,
                         showAddressForm = false,
+                        editingAddressId = null,
                         savedAddresses = addresses,
                         selectedAddressId = created.id,
                         shippingDraft = created.toDraft(),
@@ -271,6 +282,7 @@ class CheckoutViewModel @Inject constructor(
                     it.copy(
                         payBusy = true,
                         showAddressForm = false,
+                        editingAddressId = null,
                         savedAddresses = existing + created,
                         selectedAddressId = created.id,
                         shippingDraft = draft,
@@ -288,7 +300,65 @@ class CheckoutViewModel @Inject constructor(
         }
     }
 
-    fun onPointsInputChange(value: String) = _uiState.update { it.copy(pointsInput = value, pointsClampNotice = false) }
+    fun updateShippingAddress(draft: AddressDraft) {
+        val addressId = _uiState.value.editingAddressId ?: return
+        if (!draft.isValid()) {
+            _uiState.update { it.copy(error = "배송지를 확인해 주세요") }
+            return
+        }
+        val persistOnPayment = _uiState.value.step == CheckoutStep.Payment
+        viewModelScope.launch {
+            _uiState.update { it.copy(payBusy = true, error = null) }
+            val loggedIn = authRepository.authState.value is AuthState.LoggedIn
+            val existing = _uiState.value.savedAddresses.firstOrNull { it.id == addressId }
+            val updated = if (loggedIn) {
+                val result = accountRepository.updateAddress(addressId, draft)
+                if (!result.success) {
+                    _uiState.update { it.copy(payBusy = false, error = result.message ?: "배송지를 수정하지 못했습니다") }
+                    return@launch
+                }
+                val profile = runCatching { authRepository.getProfile() }.getOrNull()
+                profile?.addresses?.firstOrNull { it.id == addressId }
+                    ?: draft.toAddress(id = addressId, isDefaultShipping = existing?.isDefaultShipping == true)
+            } else {
+                draft.toAddress(id = addressId, isDefaultShipping = existing?.isDefaultShipping == true)
+            }
+            val addresses = _uiState.value.savedAddresses.map { if (it.id == addressId) updated else it }
+            val selectedId = _uiState.value.selectedAddressId
+            _uiState.update {
+                it.copy(
+                    payBusy = true,
+                    showAddressForm = false,
+                    editingAddressId = null,
+                    savedAddresses = addresses,
+                    selectedAddressId = selectedId ?: updated.id,
+                    shippingDraft = if (selectedId == null || selectedId == addressId) updated.toDraft() else it.shippingDraft,
+                )
+            }
+            if (persistOnPayment && (_uiState.value.selectedAddressId == addressId)) {
+                persistPaymentShippingAddress()
+            } else if (_uiState.value.selectedAddressId == addressId &&
+                _uiState.value.session?.isShippingRequired != false
+            ) {
+                persistShippingAddressAndLoadDelivery(showValidationError = true)
+            } else {
+                _uiState.update { it.copy(payBusy = false) }
+            }
+        }
+    }
+
+    fun onPointsInputChange(value: String) {
+        val parsed = parseGroupedAmount(value) ?: 0.0
+        val maxApplicable = min(_uiState.value.pointsBalance, _uiState.value.session?.total?.amount ?: 0.0)
+        val clamped = min(parsed, maxApplicable)
+        _uiState.update {
+            it.copy(
+                pointsInput = formatGroupedAmount(clamped),
+                pointsClampNotice = false,
+                error = null,
+            )
+        }
+    }
 
     fun goBack() {
         if (_uiState.value.step == CheckoutStep.Payment) {
@@ -382,9 +452,13 @@ class CheckoutViewModel @Inject constructor(
 
     fun applyPoints() {
         val state = _uiState.value
-        val parsed = state.pointsInput.replace(",", "").toDoubleOrNull()
+        val parsed = parseGroupedAmount(state.pointsInput)
         if (parsed == null || parsed <= 0) {
             _uiState.update { it.copy(error = "올바른 금액을 입력하세요") }
+            return
+        }
+        if (parsed < PointsMinUnit) {
+            _uiState.update { it.copy(error = "최소 사용 단위는 100 P입니다") }
             return
         }
         val maxApplicable = min(state.pointsBalance, state.session?.total?.amount ?: 0.0)
@@ -400,7 +474,7 @@ class CheckoutViewModel @Inject constructor(
                                 payBusy = false,
                                 session = session,
                                 pointsApplied = authorized,
-                                pointsInput = authorized.toPlainString(),
+                                pointsInput = formatGroupedAmount(authorized),
                                 pointsClampNotice = authorized + 0.01 < parsed,
                             )
                         }
@@ -432,14 +506,27 @@ class CheckoutViewModel @Inject constructor(
             return Result.failure(error)
         }
         _uiState.update { it.copy(session = live) }
-        val liveAmount = _uiState.value.payAmount ?: return Result.failure(IllegalStateException("결제 금액을 확인할 수 없습니다"))
-        if (abs(displayed - liveAmount) > 0.01) {
+        val liveAmount = _uiState.value.payAmount
+        if (liveAmount == null) {
+            _uiState.update { it.copy(payBusy = false, error = "결제 금액을 확인할 수 없습니다") }
+            return Result.failure(IllegalStateException("결제 금액을 확인할 수 없습니다"))
+        }
+        if (displayed > 0 && liveAmount > 0 && abs(displayed - liveAmount) > 0.01) {
             _uiState.update {
                 it.copy(payBusy = false, priceChangeMessage = "결제 금액이 변경되었습니다. 다시 확인해 주세요.")
             }
             return Result.failure(IllegalStateException("price_change"))
         }
-        val init = checkoutRepository.initializeTransaction(PaymentGateways.TOSS)
+        val chargedAmount = when {
+            liveAmount > 0 -> liveAmount
+            displayed > 0 -> displayed
+            else -> liveAmount
+        }
+        if (chargedAmount <= 0) {
+            _uiState.update { it.copy(payBusy = false) }
+            return Result.failure(IllegalStateException("결제 금액을 확인할 수 없습니다"))
+        }
+        val init = checkoutRepository.initializeTransaction(PaymentGateways.TOSS, chargedAmount)
         if (init.isFailure) {
             val message = init.exceptionOrNull()?.message
             _uiState.update { it.copy(payBusy = false, error = message) }
@@ -455,7 +542,7 @@ class CheckoutViewModel @Inject constructor(
             transactionId = payment.transactionId.orEmpty(),
             orderId = payment.orderId.orEmpty(),
             orderName = payment.orderName.orEmpty(),
-            amount = payment.amount ?: liveAmount,
+            amount = chargedAmount,
             customerKey = payment.customerKey,
             clientKey = clientKey,
         )
@@ -659,4 +746,20 @@ class CheckoutViewModel @Inject constructor(
 
     private fun Double.toPlainString(): String =
         if (this % 1.0 == 0.0) this.toInt().toString() else this.toString()
+}
+
+internal fun CheckoutSession.payableTotal(): Double? {
+    val listed = total?.amount
+    if (listed != null && listed > 0) return listed
+    val fromLines = lines.sumOf { it.totalPrice?.amount ?: 0.0 }
+    val shippingAmount = shipping?.amount ?: 0.0
+    val discountAmount = discount?.amount ?: 0.0
+    val reconstructed = max(0.0, fromLines + shippingAmount - discountAmount)
+    val pendingCharge = authorizeStatus != CheckoutAuthorizeStatus.NONE
+    if (reconstructed > 0 && (listed == null || pendingCharge)) return reconstructed
+    val subtotalAmount = subtotal?.amount
+    if (subtotalAmount != null && subtotalAmount > 0 && (listed == null || pendingCharge)) {
+        return subtotalAmount + shippingAmount
+    }
+    return listed
 }
