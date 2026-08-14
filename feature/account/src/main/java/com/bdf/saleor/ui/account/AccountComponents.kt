@@ -2,7 +2,6 @@ package com.bdf.saleor.ui.account
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -10,9 +9,9 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.GridView
@@ -22,6 +21,7 @@ import androidx.compose.material.icons.outlined.Receipt
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bdf.saleor.feature.account.R
 
@@ -46,6 +47,22 @@ enum class AccountTab {
     Settings,
 }
 
+private data class AccountTabSpec(
+    val tab: AccountTab?,
+    val icon: ImageVector,
+    val labelRes: Int,
+    val testTag: String,
+)
+
+private val AccountTabSpecs = listOf(
+    AccountTabSpec(AccountTab.Overview, Icons.Outlined.GridView, R.string.tab_overview, "account_tab_overview"),
+    AccountTabSpec(AccountTab.Orders, Icons.Outlined.Receipt, R.string.tab_orders, "account_tab_orders"),
+    AccountTabSpec(AccountTab.Points, Icons.Outlined.MonetizationOn, R.string.tab_points, "account_tab_points"),
+    AccountTabSpec(AccountTab.Addresses, Icons.Outlined.LocationOn, R.string.tab_addresses, "account_tab_addresses"),
+    AccountTabSpec(AccountTab.Settings, Icons.Outlined.Settings, R.string.tab_settings, "account_tab_settings"),
+    AccountTabSpec(null, Icons.AutoMirrored.Outlined.Logout, R.string.account_logout, "account_tab_logout"),
+)
+
 @Composable
 fun AccountTabRow(
     selected: AccountTab,
@@ -56,54 +73,23 @@ fun AccountTabRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
             .padding(4.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
-        AccountTabButton(
-            selected = selected == AccountTab.Overview,
-            icon = Icons.Outlined.GridView,
-            label = stringResource(R.string.tab_overview),
-            testTag = "account_tab_overview",
-            onClick = { onSelect(AccountTab.Overview) },
-        )
-        AccountTabButton(
-            selected = selected == AccountTab.Orders,
-            icon = Icons.Outlined.Receipt,
-            label = stringResource(R.string.tab_orders),
-            testTag = "account_tab_orders",
-            onClick = { onSelect(AccountTab.Orders) },
-        )
-        AccountTabButton(
-            selected = selected == AccountTab.Points,
-            icon = Icons.Outlined.MonetizationOn,
-            label = stringResource(R.string.tab_points),
-            testTag = "account_tab_points",
-            onClick = { onSelect(AccountTab.Points) },
-        )
-        AccountTabButton(
-            selected = selected == AccountTab.Addresses,
-            icon = Icons.Outlined.LocationOn,
-            label = stringResource(R.string.tab_addresses),
-            testTag = "account_tab_addresses",
-            onClick = { onSelect(AccountTab.Addresses) },
-        )
-        AccountTabButton(
-            selected = selected == AccountTab.Settings,
-            icon = Icons.Outlined.Settings,
-            label = stringResource(R.string.tab_settings),
-            testTag = "account_tab_settings",
-            onClick = { onSelect(AccountTab.Settings) },
-        )
-        AccountTabButton(
-            selected = false,
-            icon = Icons.AutoMirrored.Outlined.Logout,
-            label = stringResource(R.string.account_logout),
-            testTag = "account_tab_logout",
-            onClick = onLogout,
-        )
+        AccountTabSpecs.forEach { spec ->
+            val isSelected = spec.tab != null && spec.tab == selected
+            AccountTabButton(
+                selected = isSelected,
+                icon = spec.icon,
+                label = stringResource(spec.labelRes),
+                testTag = spec.testTag,
+                onClick = {
+                    if (spec.tab != null) onSelect(spec.tab) else onLogout()
+                },
+            )
+        }
     }
 }
 
@@ -120,16 +106,24 @@ private fun RowScope.AccountTabButton(
     Column(
         modifier = Modifier
             .weight(1f)
-            .clip(RoundedCornerShape(12.dp))
+            .heightIn(min = 48.dp)
+            .clip(MaterialTheme.shapes.small)
             .background(background)
             .clickable(onClick = onClick)
             .testTag(testTag)
-            .padding(horizontal = 4.dp, vertical = 10.dp),
+            .padding(horizontal = 2.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(icon, contentDescription = label, tint = content, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = content, maxLines = 1)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = content,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -185,12 +179,13 @@ fun AccountCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(20.dp),
-        content = content,
-    )
+    OutlinedCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            content = content,
+        )
+    }
 }

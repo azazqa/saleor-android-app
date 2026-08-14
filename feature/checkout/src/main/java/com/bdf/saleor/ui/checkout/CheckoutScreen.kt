@@ -4,10 +4,12 @@ import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,19 +17,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -58,8 +65,9 @@ import com.bdf.saleor.data.model.Money
 import com.bdf.saleor.data.model.digitsOnlyMobile
 import com.bdf.saleor.data.model.formatKoreanMobileNumber
 import com.bdf.saleor.feature.checkout.R
-import com.bdf.saleor.ui.components.BackTextLink
 import com.bdf.saleor.ui.components.LoadingState
+import com.bdf.saleor.ui.components.LocalSnackbarHostState
+import com.bdf.saleor.ui.components.ScreenTopBar
 import kotlinx.coroutines.launch
 
 @Composable
@@ -121,11 +129,11 @@ fun CheckoutRoute(
         },
         onEmailChange = viewModel::onEmailChange,
         onSelectSavedAddress = viewModel::selectSavedAddress,
+        onChangePaymentAddress = viewModel::changePaymentShippingAddress,
         onUseAsDefaultChange = viewModel::onUseSelectedAddressAsDefaultChange,
         onRegisterAddress = viewModel::openAddressForm,
         onContinueContact = viewModel::continueFromContact,
         onSelectDelivery = viewModel::selectDelivery,
-        onContinueShipping = viewModel::continueFromShipping,
         onPointsInput = viewModel::onPointsInputChange,
         onApplyPoints = viewModel::applyPoints,
         onFreeComplete = viewModel::completeFreeOrder,
@@ -147,11 +155,11 @@ fun CheckoutScreen(
     onBack: () -> Unit,
     onEmailChange: (String) -> Unit,
     onSelectSavedAddress: (Address) -> Unit,
+    onChangePaymentAddress: (Address) -> Unit,
     onUseAsDefaultChange: (Boolean) -> Unit,
     onRegisterAddress: () -> Unit,
     onContinueContact: () -> Unit,
     onSelectDelivery: (String) -> Unit,
-    onContinueShipping: () -> Unit,
     onPointsInput: (String) -> Unit,
     onApplyPoints: () -> Unit,
     onFreeComplete: () -> Unit,
@@ -159,80 +167,76 @@ fun CheckoutScreen(
     onPayWithToss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    val snackbarHostState = LocalSnackbarHostState.current
+    LaunchedEffect(state.priceChangeMessage) {
+        val message = state.priceChangeMessage ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(message)
+    }
+    val stepTitle = when (state.step) {
+        CheckoutStep.Contact -> stringResource(R.string.checkout_contact)
+        CheckoutStep.Payment -> stringResource(R.string.checkout_payment)
+    }
+    Scaffold(
         modifier = modifier
             .fillMaxSize()
             .testTag("checkout_screen"),
-    ) {
-        BackTextLink(text = stringResource(R.string.checkout_back), onClick = onBack)
-        Text(
-            text = when (state.step) {
-                CheckoutStep.Contact -> stringResource(R.string.checkout_contact)
-                CheckoutStep.Shipping -> stringResource(R.string.checkout_shipping)
-                CheckoutStep.Payment -> stringResource(R.string.checkout_payment)
-            },
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
-        if (state.isLoading) {
-            LoadingState()
-            return
-        }
-        if (state.confirming) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag("checkout_confirming"),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(stringResource(R.string.checkout_confirming))
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            ScreenTopBar(title = stepTitle, onBack = onBack)
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            CheckoutFlowProgress(stepIndex = state.step.toFlowIndex())
+            when {
+                state.isLoading -> LoadingState()
+                state.confirming -> Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("checkout_confirming"),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(stringResource(R.string.checkout_confirming))
+                }
+                else -> {
+                    if (!state.error.isNullOrBlank()) {
+                        Text(
+                            text = state.error,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                    when (state.step) {
+                        CheckoutStep.Contact -> ContactStep(
+                            state = state,
+                            onEmailChange = onEmailChange,
+                            onSelectSavedAddress = onSelectSavedAddress,
+                            onUseAsDefaultChange = onUseAsDefaultChange,
+                            onRegisterAddress = onRegisterAddress,
+                            onSelectDelivery = onSelectDelivery,
+                            onContinue = onContinueContact,
+                        )
+                        CheckoutStep.Payment -> PaymentStep(
+                            state = state,
+                            onPointsInput = onPointsInput,
+                            onApplyPoints = onApplyPoints,
+                            onFreeComplete = onFreeComplete,
+                            onChangeContact = { onGoToStep(CheckoutStep.Contact) },
+                            onChangeShipping = { onGoToStep(CheckoutStep.Contact) },
+                            onChangePaymentAddress = onChangePaymentAddress,
+                            onRegisterAddress = onRegisterAddress,
+                            onPayWithToss = onPayWithToss,
+                        )
+                    }
+                }
             }
-            return
-        }
-        if (!state.error.isNullOrBlank()) {
-            Text(
-                text = state.error,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(16.dp),
-            )
-        }
-        if (!state.priceChangeMessage.isNullOrBlank()) {
-            Text(
-                text = state.priceChangeMessage,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
-        when (state.step) {
-            CheckoutStep.Contact -> ContactStep(
-                state = state,
-                onEmailChange = onEmailChange,
-                onSelectSavedAddress = onSelectSavedAddress,
-                onUseAsDefaultChange = onUseAsDefaultChange,
-                onRegisterAddress = onRegisterAddress,
-                onContinue = onContinueContact,
-            )
-            CheckoutStep.Shipping -> ShippingStep(
-                state = state,
-                options = state.deliveryOptions,
-                selectedId = state.selectedDeliveryMethodId,
-                onSelect = onSelectDelivery,
-                onContinue = onContinueShipping,
-                onChangeContact = { onGoToStep(CheckoutStep.Contact) },
-                busy = state.payBusy,
-            )
-            CheckoutStep.Payment -> PaymentStep(
-                state = state,
-                onPointsInput = onPointsInput,
-                onApplyPoints = onApplyPoints,
-                onFreeComplete = onFreeComplete,
-                onChangeContact = { onGoToStep(CheckoutStep.Contact) },
-                onChangeShipping = { onGoToStep(CheckoutStep.Shipping) },
-                onPayWithToss = onPayWithToss,
-            )
         }
     }
 }
@@ -246,6 +250,7 @@ private fun CheckoutContextSummary(
     showShipping: Boolean,
     onChangeContact: () -> Unit,
     onChangeShipping: (() -> Unit)? = null,
+    onChangeAddress: (() -> Unit)? = null,
     showContact: Boolean = true,
 ) {
     val shipTo = shippingAddress?.formattedLines()?.joinToString(if (showContact) ", " else "\n")
@@ -270,7 +275,7 @@ private fun CheckoutContextSummary(
             SummaryContextRow(
                 label = stringResource(R.string.checkout_summary_ship_to),
                 value = shipTo,
-                onChange = onChangeContact,
+                onChange = onChangeAddress ?: onChangeContact,
             )
             if (!deliveryLabel.isNullOrBlank() && onChangeShipping != null) {
                 SummaryContextRow(
@@ -308,6 +313,7 @@ private fun ContactStep(
     onSelectSavedAddress: (Address) -> Unit,
     onUseAsDefaultChange: (Boolean) -> Unit,
     onRegisterAddress: () -> Unit,
+    onSelectDelivery: (String) -> Unit,
     onContinue: () -> Unit,
 ) {
     var pickerOpen by remember { mutableStateOf(false) }
@@ -355,6 +361,17 @@ private fun ContactStep(
                 Text(stringResource(R.string.checkout_use_as_default))
             }
         }
+        if (state.session?.isShippingRequired != false && selected != null) {
+            Text(stringResource(R.string.checkout_shipping), style = MaterialTheme.typography.titleMedium)
+            if (state.payBusy && state.deliveryOptions.isEmpty()) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            }
+            DeliveryMethodOptions(
+                options = state.deliveryOptions,
+                selectedId = state.selectedDeliveryMethodId,
+                onSelect = onSelectDelivery,
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Button(
             onClick = onContinue,
@@ -367,59 +384,86 @@ private fun ContactStep(
         }
     }
     if (pickerOpen) {
-        ModalBottomSheet(
-            onDismissRequest = { pickerOpen = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        AddressPickerSheet(
+            addresses = state.savedAddresses,
+            selectedId = selected?.id,
+            onDismiss = { pickerOpen = false },
+            onSelect = { address ->
+                onSelectSavedAddress(address)
+                pickerOpen = false
+            },
+            onRegisterNew = {
+                pickerOpen = false
+                onRegisterAddress()
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddressPickerSheet(
+    addresses: List<Address>,
+    selectedId: String?,
+    onDismiss: () -> Unit,
+    onSelect: (Address) -> Unit,
+    onRegisterNew: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .testTag("checkout_address_picker"),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
-                    .testTag("checkout_address_picker"),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.checkout_select_address),
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                state.savedAddresses.forEach { address ->
-                    OutlinedButton(
-                        onClick = {
-                            onSelectSavedAddress(address)
-                            pickerOpen = false
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Text(
-                                    text = address.recipientName.ifBlank { address.streetAddress1 },
-                                    modifier = Modifier.weight(1f),
-                                )
-                                if (address.isDefaultShipping) {
-                                    DefaultShippingBadge()
-                                }
+            Text(
+                text = stringResource(R.string.checkout_select_address),
+                style = MaterialTheme.typography.titleLarge,
+            )
+            addresses.forEach { address ->
+                val selected = address.id == selectedId
+                ListItem(
+                    headlineContent = {
+                        Text(address.recipientName.ifBlank { address.streetAddress1 })
+                    },
+                    supportingContent = {
+                        Text(address.localityLine())
+                    },
+                    trailingContent = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            if (address.isDefaultShipping) {
+                                DefaultShippingBadge()
                             }
-                            Text(address.localityLine(), style = MaterialTheme.typography.bodySmall)
+                            if (selected) {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
                         }
-                    }
-                }
-                Button(
-                    onClick = {
-                        pickerOpen = false
-                        onRegisterAddress()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("checkout_address_picker_add"),
-                ) {
-                    Text(stringResource(R.string.checkout_new_address))
-                }
-                Spacer(modifier = Modifier.height(16.dp))
+                        .clickable { onSelect(address) },
+                )
             }
+            Button(
+                onClick = onRegisterNew,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("checkout_address_picker_add"),
+            ) {
+                Text(stringResource(R.string.checkout_new_address))
+            }
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
@@ -430,12 +474,16 @@ private fun ShippingAddressCard(
     onChange: () -> Unit,
     onRegister: () -> Unit,
 ) {
-    Column(
+    OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("checkout_shipping_card"),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        shape = MaterialTheme.shapes.medium,
     ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -493,21 +541,14 @@ private fun ShippingAddressCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        }
     }
 }
 
 @Composable
 private fun DefaultShippingBadge() {
-    Surface(
-        shape = RoundedCornerShape(4.dp),
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-    ) {
-        Text(
-            text = stringResource(R.string.checkout_default_shipping),
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-        )
+    Badge {
+        Text(stringResource(R.string.checkout_default_shipping))
     }
 }
 
@@ -533,18 +574,26 @@ private fun CheckoutAddressCreateScreen(
         return
     }
     BackHandler(onBack = onBack)
-    Column(
+    Scaffold(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
             .testTag("checkout_address_create"),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.checkout_register_address_title),
-            style = MaterialTheme.typography.headlineMedium,
-        )
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            ScreenTopBar(
+                title = stringResource(R.string.checkout_register_address_title),
+                onBack = onBack,
+            )
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
         if (!error.isNullOrBlank()) {
             Text(error, color = MaterialTheme.colorScheme.error)
         }
@@ -617,35 +666,17 @@ private fun CheckoutAddressCreateScreen(
         ) {
             Text(stringResource(R.string.checkout_cancel))
         }
+        }
     }
 }
 
 @Composable
-private fun ShippingStep(
-    state: CheckoutUiState,
+private fun DeliveryMethodOptions(
     options: List<DeliveryOption>,
     selectedId: String?,
     onSelect: (String) -> Unit,
-    onContinue: () -> Unit,
-    onChangeContact: () -> Unit,
-    busy: Boolean,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
-            .testTag("checkout_shipping"),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        CheckoutContextSummary(
-            email = state.email,
-            shippingAddress = state.session?.shippingAddress,
-            shippingDraft = state.shippingDraft,
-            deliveryLabel = null,
-            showShipping = true,
-            onChangeContact = onChangeContact,
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { option ->
             Row(
                 modifier = Modifier
@@ -667,22 +698,17 @@ private fun ShippingStep(
                     Text(option.name, style = MaterialTheme.typography.titleMedium)
                     if (option.minDeliveryDays != null && option.maxDeliveryDays != null) {
                         Text(
-                            stringResource(R.string.checkout_delivery_days, option.minDeliveryDays!!, option.maxDeliveryDays!!),
+                            stringResource(
+                                R.string.checkout_delivery_days,
+                                option.minDeliveryDays!!,
+                                option.maxDeliveryDays!!,
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
                 }
                 Text(option.price?.format().orEmpty())
             }
-        }
-        Button(
-            onClick = onContinue,
-            enabled = !busy && !selectedId.isNullOrBlank(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("checkout_shipping_continue"),
-        ) {
-            Text(stringResource(R.string.checkout_continue))
         }
     }
 }
@@ -695,8 +721,11 @@ private fun PaymentStep(
     onFreeComplete: () -> Unit,
     onChangeContact: () -> Unit,
     onChangeShipping: () -> Unit,
+    onChangePaymentAddress: (Address) -> Unit,
+    onRegisterAddress: () -> Unit,
     onPayWithToss: () -> Unit,
 ) {
+    var pickerOpen by remember { mutableStateOf(false) }
     val selectedDelivery = state.deliveryOptions.firstOrNull { it.id == state.selectedDeliveryMethodId }
     val deliveryLabel = selectedDelivery?.let { option ->
         listOf(option.name, option.price?.format().orEmpty()).filter { it.isNotBlank() }.joinToString(" · ")
@@ -711,13 +740,14 @@ private fun PaymentStep(
     ) {
         CheckoutContextSummary(
             email = state.email,
-            shippingAddress = state.session?.shippingAddress,
+            shippingAddress = state.selectedAddress ?: state.session?.shippingAddress,
             shippingDraft = state.shippingDraft,
             deliveryLabel = deliveryLabel,
             showContact = false,
             showShipping = state.session?.isShippingRequired != false,
             onChangeContact = onChangeContact,
             onChangeShipping = if (state.session?.isShippingRequired == false) null else onChangeShipping,
+            onChangeAddress = { pickerOpen = true },
         )
         Text(stringResource(R.string.checkout_summary), style = MaterialTheme.typography.titleMedium)
         state.session?.lines?.forEach { line ->
@@ -797,5 +827,20 @@ private fun PaymentStep(
                 Text(payLabel)
             }
         }
+    }
+    if (pickerOpen) {
+        AddressPickerSheet(
+            addresses = state.savedAddresses,
+            selectedId = state.selectedAddressId,
+            onDismiss = { pickerOpen = false },
+            onSelect = { address ->
+                onChangePaymentAddress(address)
+                pickerOpen = false
+            },
+            onRegisterNew = {
+                pickerOpen = false
+                onRegisterAddress()
+            },
+        )
     }
 }

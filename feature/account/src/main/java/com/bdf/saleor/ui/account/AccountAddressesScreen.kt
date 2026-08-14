@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -101,10 +102,10 @@ fun AccountAddressesScreen(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             if (address.isDefaultShipping) {
-                                Text(stringResource(R.string.addresses_default_shipping), style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
+                                Badge { Text(stringResource(R.string.addresses_default_shipping)) }
                             }
                             if (address.isDefaultBilling) {
-                                Text(stringResource(R.string.addresses_default_billing), style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
+                                Badge { Text(stringResource(R.string.addresses_default_billing)) }
                             }
                             Row {
                                 TextButton(onClick = { editing = address }) {

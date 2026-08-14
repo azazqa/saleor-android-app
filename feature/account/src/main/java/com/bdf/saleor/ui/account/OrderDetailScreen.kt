@@ -3,16 +3,17 @@ package com.bdf.saleor.ui.account
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,9 +27,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.bdf.saleor.core.designsystem.R as DesignR
 import com.bdf.saleor.feature.account.R
-import com.bdf.saleor.ui.components.BackTextLink
 import com.bdf.saleor.ui.components.ErrorState
 import com.bdf.saleor.ui.components.LoadingState
+import com.bdf.saleor.ui.components.ScreenTopBar
 
 @Composable
 fun OrderDetailScreen(
@@ -38,17 +39,17 @@ fun OrderDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Column(
+    Scaffold(
         modifier = modifier
             .fillMaxSize()
             .testTag("order_detail_screen"),
-    ) {
-        BackTextLink(text = stringResource(R.string.back_link), onClick = onBack)
-        Text(
-            text = stringResource(R.string.order_detail_title),
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            ScreenTopBar(title = stringResource(R.string.order_detail_title), onBack = onBack)
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+    ) { innerPadding ->
+        Column(modifier = Modifier.padding(innerPadding)) {
         when {
             state.isLoading -> LoadingState()
             state.error == "not_found" -> ErrorState(
@@ -94,7 +95,7 @@ fun OrderDetailScreen(
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .size(72.dp)
-                                    .clip(RoundedCornerShape(8.dp)),
+                                    .clip(MaterialTheme.shapes.small),
                             )
                             Column(modifier = Modifier.padding(start = 12.dp)) {
                                 Text(line.productName, style = MaterialTheme.typography.titleMedium)
@@ -125,6 +126,7 @@ fun OrderDetailScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
             }
+        }
         }
     }
 }

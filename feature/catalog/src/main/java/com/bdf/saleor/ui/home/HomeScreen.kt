@@ -1,7 +1,6 @@
 package com.bdf.saleor.ui.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,9 +10,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,8 +35,6 @@ import com.bdf.saleor.ui.components.EmptyState
 import com.bdf.saleor.ui.components.ErrorState
 import com.bdf.saleor.ui.components.LoadingState
 import com.bdf.saleor.ui.components.ProductGrid
-import com.bdf.saleor.ui.theme.BrandNavy
-import com.bdf.saleor.ui.theme.BrandOffWhite
 
 @Composable
 fun HomeScreen(
@@ -111,21 +109,21 @@ private fun HeroBanner() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(BrandNavy)
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.primary)
             .padding(24.dp),
     ) {
         Column {
             Text(
                 text = stringResource(R.string.home_hero_title),
                 style = MaterialTheme.typography.headlineLarge,
-                color = BrandOffWhite,
+                color = MaterialTheme.colorScheme.onPrimary,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.home_hero_subtitle),
                 style = MaterialTheme.typography.bodyLarge,
-                color = BrandOffWhite.copy(alpha = 0.85f),
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
             )
         }
     }
@@ -143,20 +141,13 @@ private fun CategoryChips(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         categories.take(12).forEach { category ->
-            Box(
+            AssistChip(
+                onClick = { onCategoryClick(category) },
+                label = { Text(category.name) },
                 modifier = Modifier
-                    .testTag("category_chip_${category.slug}")
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer)
-                    .clickable { onCategoryClick(category) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-            ) {
-                Text(
-                    text = category.name,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            }
+                    .heightIn(min = 48.dp)
+                    .testTag("category_chip_${category.slug}"),
+            )
         }
     }
 }

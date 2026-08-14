@@ -20,6 +20,7 @@ dependencies {
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.appcompat)
+    implementation(libs.google.material)
     implementation(libs.androidx.webkit)
     implementation(libs.coil.compose)
     implementation(libs.tosspayments.android)

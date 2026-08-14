@@ -26,7 +26,6 @@ import kotlinx.coroutines.launch
 
 enum class CheckoutStep {
     Contact,
-    Shipping,
     Payment,
 }
 
@@ -92,7 +91,9 @@ data class CheckoutUiState(
             ?: savedAddresses.firstOrNull()
 
     val canContinueFromContact: Boolean
-        get() = selectedAddress != null && !payBusy
+        get() = selectedAddress != null &&
+            !payBusy &&
+            (session?.isShippingRequired == false || !selectedDeliveryMethodId.isNullOrBlank())
 
     val showUseAsDefaultShipping: Boolean
         get() = loggedIn && selectedAddress != null && selectedAddress?.isDefaultShipping != true
@@ -153,6 +154,8 @@ class CheckoutViewModel @Inject constructor(
                     }
                     if (_uiState.value.step == CheckoutStep.Payment) {
                         loadTossClientKey()
+                    } else if (session.isShippingRequired) {
+                        persistShippingAddressAndLoadDelivery()
                     }
                 }
                 .onFailure { error ->
@@ -177,6 +180,18 @@ class CheckoutViewModel @Inject constructor(
                 useSelectedAddressAsDefault = false,
                 error = null,
             )
+        }
+        if (_uiState.value.step == CheckoutStep.Contact &&
+            _uiState.value.session?.isShippingRequired != false
+        ) {
+            viewModelScope.launch { persistShippingAddressAndLoadDelivery(showValidationError = true) }
+        }
+    }
+
+    fun changePaymentShippingAddress(address: Address) {
+        selectSavedAddress(address)
+        viewModelScope.launch {
+            persistPaymentShippingAddress()
         }
     }
 
@@ -213,6 +228,7 @@ class CheckoutViewModel @Inject constructor(
             _uiState.update { it.copy(error = "배송지를 확인해 주세요") }
             return
         }
+        val persistOnPayment = _uiState.value.step == CheckoutStep.Payment
         viewModelScope.launch {
             _uiState.update { it.copy(payBusy = true, error = null) }
             val loggedIn = authRepository.authState.value is AuthState.LoggedIn
@@ -238,7 +254,7 @@ class CheckoutViewModel @Inject constructor(
                 }
                 _uiState.update {
                     it.copy(
-                        payBusy = false,
+                        payBusy = true,
                         showAddressForm = false,
                         savedAddresses = addresses,
                         selectedAddressId = created.id,
@@ -253,7 +269,7 @@ class CheckoutViewModel @Inject constructor(
                 )
                 _uiState.update {
                     it.copy(
-                        payBusy = false,
+                        payBusy = true,
                         showAddressForm = false,
                         savedAddresses = existing + created,
                         selectedAddressId = created.id,
@@ -262,19 +278,22 @@ class CheckoutViewModel @Inject constructor(
                     )
                 }
             }
+            if (persistOnPayment) {
+                persistPaymentShippingAddress()
+            } else if (_uiState.value.session?.isShippingRequired != false) {
+                persistShippingAddressAndLoadDelivery(showValidationError = true)
+            } else {
+                _uiState.update { it.copy(payBusy = false) }
+            }
         }
     }
 
     fun onPointsInputChange(value: String) = _uiState.update { it.copy(pointsInput = value, pointsClampNotice = false) }
 
     fun goBack() {
-        val state = _uiState.value
-        val previous = when (state.step) {
-            CheckoutStep.Payment -> if (state.session?.isShippingRequired == false) CheckoutStep.Contact else CheckoutStep.Shipping
-            CheckoutStep.Shipping -> CheckoutStep.Contact
-            CheckoutStep.Contact -> return
+        if (_uiState.value.step == CheckoutStep.Payment) {
+            goToStep(CheckoutStep.Contact)
         }
-        goToStep(previous)
     }
 
     fun goToStep(step: CheckoutStep) {
@@ -311,42 +330,54 @@ class CheckoutViewModel @Inject constructor(
                 loadTossClientKey()
                 return@launch
             }
-            val optionsResult = checkoutRepository.calculateDeliveryOptions()
-            _uiState.update {
-                it.copy(
-                    payBusy = false,
-                    session = session,
-                    deliveryOptions = optionsResult.getOrDefault(emptyList()),
-                    step = CheckoutStep.Shipping,
-                    error = optionsResult.exceptionOrNull()?.message,
-                    selectedDeliveryMethodId = it.selectedDeliveryMethodId
-                        ?: optionsResult.getOrNull()?.firstOrNull { option -> option.active }?.id,
-                )
+            val optionsResult = if (state.deliveryOptions.isEmpty()) {
+                checkoutRepository.calculateDeliveryOptions()
+            } else {
+                Result.success(state.deliveryOptions)
             }
+            val options = optionsResult.getOrDefault(state.deliveryOptions)
+            val methodId = state.selectedDeliveryMethodId
+                ?: options.firstOrNull { it.active }?.id
+                ?: options.firstOrNull()?.id
+            if (methodId.isNullOrBlank()) {
+                _uiState.update {
+                    it.copy(
+                        payBusy = false,
+                        session = session,
+                        deliveryOptions = options,
+                        error = optionsResult.exceptionOrNull()?.message ?: "배송 방법을 선택해 주세요",
+                    )
+                }
+                return@launch
+            }
+            checkoutRepository.updateDeliveryMethod(methodId)
+                .onSuccess { updated ->
+                    _uiState.update {
+                        it.copy(
+                            payBusy = false,
+                            session = updated,
+                            deliveryOptions = options,
+                            selectedDeliveryMethodId = methodId,
+                            step = CheckoutStep.Payment,
+                        )
+                    }
+                    loadTossClientKey()
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            payBusy = false,
+                            session = session,
+                            deliveryOptions = options,
+                            error = error.message,
+                        )
+                    }
+                }
         }
     }
 
     fun selectDelivery(deliveryMethodId: String) {
         _uiState.update { it.copy(selectedDeliveryMethodId = deliveryMethodId) }
-    }
-
-    fun continueFromShipping() {
-        val methodId = _uiState.value.selectedDeliveryMethodId
-        if (methodId.isNullOrBlank()) {
-            _uiState.update { it.copy(error = "배송 방법을 선택해 주세요") }
-            return
-        }
-        viewModelScope.launch {
-            _uiState.update { it.copy(payBusy = true, error = null) }
-            checkoutRepository.updateDeliveryMethod(methodId)
-                .onSuccess { session ->
-                    _uiState.update { it.copy(payBusy = false, session = session, step = CheckoutStep.Payment) }
-                    loadTossClientKey()
-                }
-                .onFailure { error ->
-                    _uiState.update { it.copy(payBusy = false, error = error.message) }
-                }
-        }
     }
 
     fun applyPoints() {
@@ -487,6 +518,93 @@ class CheckoutViewModel @Inject constructor(
         checkoutRepository.initializeTossClientKey()
             .onSuccess { key -> _uiState.update { it.copy(tossClientKey = key) } }
             .onFailure { error -> _uiState.update { it.copy(error = error.message) } }
+    }
+
+    private suspend fun persistShippingAddressAndLoadDelivery(showValidationError: Boolean = false) {
+        val state = _uiState.value
+        val draft = state.shippingDraft
+        if (!draft.isValid()) {
+            if (showValidationError) {
+                _uiState.update { it.copy(payBusy = false, error = "배송지를 확인해 주세요") }
+            }
+            return
+        }
+        _uiState.update { it.copy(payBusy = true, error = null) }
+        val addressResult = checkoutRepository.updateShippingAddress(draft)
+        if (addressResult.isFailure) {
+            _uiState.update { it.copy(payBusy = false, error = addressResult.exceptionOrNull()?.message) }
+            return
+        }
+        val session = addressResult.getOrThrow()
+        if (!session.isShippingRequired) {
+            _uiState.update {
+                it.copy(
+                    payBusy = false,
+                    session = session,
+                    deliveryOptions = emptyList(),
+                    selectedDeliveryMethodId = null,
+                )
+            }
+            return
+        }
+        val optionsResult = checkoutRepository.calculateDeliveryOptions()
+        val options = optionsResult.getOrDefault(emptyList())
+        val selectedId = pickDeliveryMethodId(options, state.selectedDeliveryMethodId)
+        _uiState.update {
+            it.copy(
+                payBusy = false,
+                session = session,
+                deliveryOptions = options,
+                selectedDeliveryMethodId = selectedId,
+                error = optionsResult.exceptionOrNull()?.message,
+            )
+        }
+    }
+
+    private fun pickDeliveryMethodId(options: List<DeliveryOption>, previousId: String?): String? =
+        when {
+            previousId != null && options.any { it.id == previousId } -> previousId
+            else -> options.firstOrNull { it.active }?.id ?: options.firstOrNull()?.id
+        }
+
+    private suspend fun persistPaymentShippingAddress() {
+        val state = _uiState.value
+        val draft = state.shippingDraft
+        if (!draft.isValid()) {
+            _uiState.update { it.copy(payBusy = false, error = "배송지를 확인해 주세요") }
+            return
+        }
+        _uiState.update { it.copy(payBusy = true, error = null) }
+        val addressResult = checkoutRepository.updateShippingAddress(draft)
+        if (addressResult.isFailure) {
+            _uiState.update { it.copy(payBusy = false, error = addressResult.exceptionOrNull()?.message) }
+            return
+        }
+        var session = addressResult.getOrThrow()
+        if (!session.isShippingRequired) {
+            _uiState.update { it.copy(payBusy = false, session = session, step = CheckoutStep.Payment) }
+            return
+        }
+        val optionsResult = checkoutRepository.calculateDeliveryOptions()
+        val options = optionsResult.getOrDefault(emptyList())
+        val previousId = state.selectedDeliveryMethodId ?: session.selectedDeliveryMethodId
+        val selectedId = pickDeliveryMethodId(options, previousId)
+        if (selectedId != null) {
+            val deliveryResult = checkoutRepository.updateDeliveryMethod(selectedId)
+            if (deliveryResult.isSuccess) {
+                session = deliveryResult.getOrThrow()
+            }
+        }
+        _uiState.update {
+            it.copy(
+                payBusy = false,
+                session = session,
+                deliveryOptions = options,
+                selectedDeliveryMethodId = selectedId,
+                step = CheckoutStep.Payment,
+                error = optionsResult.exceptionOrNull()?.message,
+            )
+        }
     }
 
     private suspend fun applyDefaultShippingIfRequested() {

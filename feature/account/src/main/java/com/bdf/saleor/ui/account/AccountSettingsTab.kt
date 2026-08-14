@@ -36,7 +36,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bdf.saleor.feature.account.R
-import com.bdf.saleor.ui.theme.BrandDestructive
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
@@ -120,7 +119,7 @@ fun AccountSettingsTab(
             Text(
                 text = stringResource(R.string.settings_delete_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = BrandDestructive,
+                color = MaterialTheme.colorScheme.error,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -135,7 +134,10 @@ fun AccountSettingsTab(
             Spacer(modifier = Modifier.height(12.dp))
             Button(
                 onClick = { confirmDelete = true },
-                colors = ButtonDefaults.buttonColors(containerColor = BrandDestructive),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                ),
                 enabled = !state.isDeleting,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -179,7 +181,7 @@ fun AccountSettingsTab(
                 }
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         viewModel.saveName()
                         editName = false
@@ -226,7 +228,7 @@ fun AccountSettingsTab(
                 }
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         viewModel.changePassword()
                         changePassword = false
@@ -246,11 +248,15 @@ fun AccountSettingsTab(
             title = { Text(stringResource(R.string.settings_delete_title)) },
             text = { Text(stringResource(R.string.settings_delete_confirm)) },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         viewModel.requestDeletion()
                         confirmDelete = false
                     },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
                 ) { Text(stringResource(R.string.settings_delete_title)) }
             },
             dismissButton = {

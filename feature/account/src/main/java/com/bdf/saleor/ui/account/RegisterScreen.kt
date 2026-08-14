@@ -2,6 +2,7 @@ package com.bdf.saleor.ui.account
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -12,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bdf.saleor.feature.account.R
-import com.bdf.saleor.ui.components.BackTextLink
+import com.bdf.saleor.ui.components.ScreenTopBar
 
 @Composable
 fun RegisterScreen(
@@ -34,19 +36,19 @@ fun RegisterScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Column(
+    Scaffold(
         modifier = modifier
             .fillMaxSize()
             .testTag("register_screen"),
-    ) {
-        BackTextLink(text = stringResource(R.string.back_link), onClick = onBack)
-        Text(
-            text = stringResource(R.string.register_title),
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(horizontal = 24.dp),
-        )
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            ScreenTopBar(title = stringResource(R.string.register_title), onBack = onBack)
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+    ) { innerPadding ->
         Column(
             modifier = Modifier
+                .padding(innerPadding)
                 .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
         ) {

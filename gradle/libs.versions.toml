@@ -20,6 +20,7 @@ datastore = "1.1.7"
 androidxTestRunner = "1.7.0"
 appcompat = "1.7.1"
 webkit = "1.14.0"
+googleMaterial = "1.12.0"
 tosspayments = "0.1.15"
 
 [libraries]
@@ -29,6 +30,7 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+google-material = { group = "com.google.android.material", name = "material", version.ref = "googleMaterial" }
 androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
 tosspayments-android = { group = "com.github.tosspayments", name = "payment-sdk-android", version.ref = "tosspayments" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }

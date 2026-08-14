@@ -39,37 +39,23 @@ class CheckoutViewModelTest {
     ) = CheckoutViewModel(checkout, auth, account)
 
     @Test
-    fun continueFromContact_withShipping_goesToShippingStep() = runTest(mainDispatcherRule.dispatcher) {
-        val viewModel = viewModel()
-        advanceUntilIdle()
-        viewModel.onEmailChange("guest@test.com")
-        viewModel.createShippingAddress(validDraft())
-        advanceUntilIdle()
-
-        viewModel.continueFromContact()
-        advanceUntilIdle()
-
-        assertEquals(CheckoutStep.Shipping, viewModel.uiState.value.step)
-        assertEquals(1, viewModel.uiState.value.deliveryOptions.size)
-        assertEquals("d1", viewModel.uiState.value.selectedDeliveryMethodId)
-    }
-
-    @Test
-    fun continueFromShipping_usesDeliveryId() = runTest(mainDispatcherRule.dispatcher) {
+    fun continueFromContact_withShipping_goesToPayment() = runTest(mainDispatcherRule.dispatcher) {
         val checkout = FakeCheckoutRepository()
         val viewModel = viewModel(checkout)
         advanceUntilIdle()
         viewModel.onEmailChange("guest@test.com")
         viewModel.createShippingAddress(validDraft())
         advanceUntilIdle()
+
+        assertEquals(CheckoutStep.Contact, viewModel.uiState.value.step)
+        assertEquals(1, viewModel.uiState.value.deliveryOptions.size)
+        assertEquals("d1", viewModel.uiState.value.selectedDeliveryMethodId)
+
         viewModel.continueFromContact()
         advanceUntilIdle()
 
-        viewModel.continueFromShipping()
-        advanceUntilIdle()
-
-        assertEquals("d1", checkout.lastDeliveryMethodId)
         assertEquals(CheckoutStep.Payment, viewModel.uiState.value.step)
+        assertEquals("d1", checkout.lastDeliveryMethodId)
     }
 
     @Test
@@ -327,6 +313,81 @@ class CheckoutViewModelTest {
     }
 
     @Test
+    fun changePaymentShippingAddress_staysOnPaymentAndUpdatesSession() = runTest(mainDispatcherRule.dispatcher) {
+        val existing = Address(
+            id = "addr-1",
+            firstName = "김민성",
+            lastName = "",
+            companyName = "",
+            streetAddress1 = "서울 성동구",
+            streetAddress2 = "101호",
+            city = "",
+            cityArea = "",
+            postalCode = "04780",
+            countryCode = "KR",
+            countryName = "South Korea",
+            countryArea = "",
+            phone = "010-0000-0000",
+            isDefaultShipping = true,
+            isDefaultBilling = false,
+        )
+        val extra = existing.copy(
+            id = "addr-2",
+            firstName = "홍",
+            streetAddress1 = "테헤란로 1",
+            isDefaultShipping = false,
+        )
+        val auth = FakeAuthRepository(AuthState.LoggedIn("user@test.com"))
+        auth.profile = auth.profile.copy(
+            addresses = listOf(existing, extra),
+            defaultShippingAddressId = existing.id,
+        )
+        val checkout = FakeCheckoutRepository()
+        val viewModel = viewModel(checkout, auth)
+        advanceUntilIdle()
+        viewModel.onEmailChange("user@test.com")
+        viewModel.continueFromContact()
+        advanceUntilIdle()
+
+        assertEquals(CheckoutStep.Payment, viewModel.uiState.value.step)
+
+        viewModel.changePaymentShippingAddress(extra)
+        advanceUntilIdle()
+
+        assertEquals(CheckoutStep.Payment, viewModel.uiState.value.step)
+        assertEquals("addr-2", viewModel.uiState.value.selectedAddressId)
+        assertEquals("홍", checkout.session.shippingAddress?.firstName)
+        assertEquals("테헤란로 1", checkout.session.shippingAddress?.streetAddress1)
+        assertEquals("d1", viewModel.uiState.value.selectedDeliveryMethodId)
+        assertEquals("d1", checkout.lastDeliveryMethodId)
+    }
+
+    @Test
+    fun createShippingAddress_fromPayment_persistsAndStaysOnPayment() = runTest(mainDispatcherRule.dispatcher) {
+        val checkout = FakeCheckoutRepository()
+        val viewModel = viewModel(checkout)
+        advanceUntilIdle()
+        viewModel.onEmailChange("guest@test.com")
+        viewModel.createShippingAddress(validDraft())
+        advanceUntilIdle()
+        viewModel.continueFromContact()
+        advanceUntilIdle()
+
+        assertEquals(CheckoutStep.Payment, viewModel.uiState.value.step)
+
+        viewModel.createShippingAddress(
+            validDraft().copy(firstName = "새주소", streetAddress1 = "강남대로 10"),
+        )
+        advanceUntilIdle()
+
+        assertEquals(CheckoutStep.Payment, viewModel.uiState.value.step)
+        assertEquals("새주소", viewModel.uiState.value.selectedAddress?.firstName)
+        assertEquals("새주소", checkout.session.shippingAddress?.firstName)
+        assertEquals("강남대로 10", checkout.session.shippingAddress?.streetAddress1)
+        assertFalse(viewModel.uiState.value.showAddressForm)
+    }
+
+    @Test
     fun continueFromContact_withoutAddress_staysOnContact() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = viewModel()
         advanceUntilIdle()
@@ -336,6 +397,23 @@ class CheckoutViewModelTest {
 
         viewModel.continueFromContact()
         advanceUntilIdle()
+
+        assertEquals(CheckoutStep.Contact, viewModel.uiState.value.step)
+    }
+
+    @Test
+    fun goBack_fromPayment_returnsToContact() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onEmailChange("guest@test.com")
+        viewModel.createShippingAddress(validDraft())
+        advanceUntilIdle()
+        viewModel.continueFromContact()
+        advanceUntilIdle()
+
+        assertEquals(CheckoutStep.Payment, viewModel.uiState.value.step)
+
+        viewModel.goBack()
 
         assertEquals(CheckoutStep.Contact, viewModel.uiState.value.step)
     }

@@ -13,16 +13,22 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -30,6 +36,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewAssetLoader
 import com.bdf.saleor.feature.checkout.R
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KakaoPostcodeDialog(
     onResult: (KakaoAddressPatch) -> Unit,
@@ -38,25 +45,37 @@ fun KakaoPostcodeDialog(
 ) {
     val currentOnResult = rememberUpdatedState(onResult)
     BackHandler(onBack = onDismiss)
-    Surface(
+    Scaffold(
         modifier = modifier
             .fillMaxSize()
             .testTag("checkout_postcode_dialog"),
-        color = MaterialTheme.colorScheme.background,
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .testTag("checkout_postcode_close"),
-            ) {
-                Text(stringResource(R.string.checkout_close))
-            }
-            AndroidView(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.checkout_find_address)) },
+                navigationIcon = {
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.testTag("checkout_postcode_close"),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.checkout_close),
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+            )
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+    ) { innerPadding ->
+        AndroidView(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxWidth()
+                .fillMaxSize(),
                 factory = { context ->
                     createKakaoPostcodeWebView(context) { selection ->
                         currentOnResult.value(selection.toAddressPatch())
@@ -66,8 +85,7 @@ fun KakaoPostcodeDialog(
                     webView.removeJavascriptInterface(KAKAO_POSTCODE_BRIDGE)
                     webView.destroy()
                 },
-            )
-        }
+        )
     }
 }
 
