@@ -9,6 +9,7 @@ import com.bdf.saleor.data.model.OrderDetail
 import com.bdf.saleor.data.model.OrderLineItem
 import com.bdf.saleor.data.model.OrderPage
 import com.bdf.saleor.data.model.OrderSummary
+import com.bdf.saleor.data.model.formatKoreanDisplayPhone
 import com.bdf.saleor.graphql.CurrentUserOrderDetailQuery
 import com.bdf.saleor.graphql.CurrentUserOrdersPaginatedQuery
 import com.bdf.saleor.graphql.fragment.OrderDetails
@@ -107,6 +108,6 @@ private fun OrderDetails.ShippingAddress.formatAddress(): String {
         streetAddress2?.takeIf { it.isNotBlank() },
         listOfNotNull(postalCode, city).joinToString(" ").ifBlank { null },
         country.country,
-        phone?.takeIf { it.isNotBlank() },
+        phone?.takeIf { it.isNotBlank() }?.let { formatKoreanDisplayPhone(it, country.code) },
     ).joinToString("\n")
 }

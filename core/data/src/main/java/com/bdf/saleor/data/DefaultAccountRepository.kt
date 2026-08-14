@@ -124,11 +124,11 @@ class DefaultAccountRepository @Inject constructor(
 
 private fun AddressDraft.toInput(): AddressInput = AddressInput(
     firstName = Optional.present(firstName.trim()),
-    lastName = Optional.present(lastName.trim()),
+    lastName = Optional.present(lastName.trim().ifBlank { firstName.trim() }),
     companyName = Optional.present(companyName.trim()),
     streetAddress1 = Optional.present(streetAddress1.trim()),
     streetAddress2 = Optional.present(streetAddress2.trim()),
-    city = Optional.present(city.trim()),
+    city = Optional.present(city.trim().ifBlank { streetAddress1.trim() }),
     cityArea = Optional.present(cityArea.trim()),
     postalCode = Optional.present(postalCode.trim()),
     country = Optional.present(CountryCode.safeValueOf(countryCode.ifBlank { "KR" })),

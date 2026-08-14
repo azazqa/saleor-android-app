@@ -143,8 +143,16 @@ data class Address(
     val isDefaultShipping: Boolean,
     val isDefaultBilling: Boolean,
 ) {
+    val recipientName: String
+        get() = listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ")
+
+    fun localityLine(): String = listOf(city, countryArea)
+        .filter { it.isNotBlank() }
+        .joinToString(" ")
+        .ifBlank { streetAddress1 }
+
     fun formattedLines(): List<String> = buildList {
-        val name = listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ")
+        val name = recipientName
         if (name.isNotBlank()) add(name)
         if (companyName.isNotBlank()) add(companyName)
         if (streetAddress1.isNotBlank()) add(streetAddress1)
@@ -152,8 +160,11 @@ data class Address(
         val cityLine = listOf(postalCode, city, countryArea).filter { it.isNotBlank() }.joinToString(" ")
         if (cityLine.isNotBlank()) add(cityLine)
         if (countryName.isNotBlank()) add(countryName)
-        if (phone.isNotBlank()) add(phone)
+        val displayPhone = displayPhone()
+        if (displayPhone.isNotBlank()) add(displayPhone)
     }
+
+    fun displayPhone(): String = formatKoreanDisplayPhone(phone, countryCode)
 }
 
 data class AddressDraft(

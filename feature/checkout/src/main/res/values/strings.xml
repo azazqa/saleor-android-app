@@ -21,8 +21,17 @@
     <string name="checkout_back">이전</string>
     <string name="checkout_pay">결제하기</string>
     <string name="checkout_free_complete">주문 확정</string>
-    <string name="checkout_select_address">저장된 주소 선택</string>
-    <string name="checkout_new_address">새 주소 입력</string>
+    <string name="checkout_select_address">배송지 선택</string>
+    <string name="checkout_new_address">새 배송지 등록</string>
+    <string name="checkout_register_address">배송지 등록</string>
+    <string name="checkout_register_address_title">배송지 등록</string>
+    <string name="checkout_cancel">취소</string>
+    <string name="checkout_find_address">주소 찾기</string>
+    <string name="checkout_close">닫기</string>
+    <string name="checkout_change_address">변경</string>
+    <string name="checkout_default_shipping">기본배송지</string>
+    <string name="checkout_no_address">등록된 배송지가 없습니다</string>
+    <string name="checkout_use_as_default">기본 배송지로 사용</string>
     <string name="checkout_same_as_shipping">청구지를 배송지와 동일하게</string>
     <string name="checkout_billing">청구지</string>
     <string name="checkout_summary">주문 요약</string>
@@ -58,4 +67,5 @@
     <string name="field_postal">우편번호</string>
     <string name="field_country_area">시/도</string>
     <string name="field_phone">전화번호</string>
+    <string name="field_mobile">핸드폰 번호</string>
 </resources>

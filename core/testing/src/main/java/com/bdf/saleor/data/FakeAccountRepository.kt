@@ -63,7 +63,10 @@ class FakeAccountRepository : AccountRepository {
         return AuthResult(true)
     }
 
+    var lastDefaultShippingId: String? = null
+
     override suspend fun setDefaultAddress(id: String, kind: AddressKind): AuthResult {
+        if (kind == AddressKind.SHIPPING) lastDefaultShippingId = id
         addresses = addresses.map { address ->
             when (kind) {
                 AddressKind.SHIPPING -> address.copy(isDefaultShipping = address.id == id)

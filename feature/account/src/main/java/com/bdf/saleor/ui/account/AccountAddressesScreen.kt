@@ -168,7 +168,7 @@ private fun AddressFormSheet(
                 postalCode = address?.postalCode.orEmpty(),
                 countryCode = address?.countryCode?.ifBlank { "KR" } ?: "KR",
                 countryArea = address?.countryArea.orEmpty(),
-                phone = address?.phone.orEmpty(),
+                phone = address?.displayPhone().orEmpty(),
             ),
         )
     }
@@ -220,13 +220,6 @@ private fun AddressFormSheet(
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
-                value = draft.city,
-                onValueChange = { draft = draft.copy(city = it) },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.addresses_city)) },
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
                 value = draft.postalCode,
                 onValueChange = { draft = draft.copy(postalCode = it) },
                 modifier = Modifier.fillMaxWidth(),
@@ -250,8 +243,11 @@ private fun AddressFormSheet(
             Button(
                 onClick = { onSubmit(draft) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = draft.firstName.isNotBlank() && draft.lastName.isNotBlank() &&
-                    draft.streetAddress1.isNotBlank() && draft.city.isNotBlank() && draft.postalCode.isNotBlank(),
+                enabled = draft.firstName.isNotBlank() &&
+                    draft.streetAddress1.isNotBlank() &&
+                    draft.streetAddress2.isNotBlank() &&
+                    draft.postalCode.isNotBlank() &&
+                    draft.phone.isNotBlank(),
             ) {
                 Text(stringResource(R.string.account_save))
             }

@@ -2,10 +2,12 @@ package com.bdf.saleor.ui.checkout
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bdf.saleor.data.AccountRepository
 import com.bdf.saleor.data.AuthRepository
 import com.bdf.saleor.data.CheckoutRepository
 import com.bdf.saleor.data.model.Address
 import com.bdf.saleor.data.model.AddressDraft
+import com.bdf.saleor.data.model.AddressKind
 import com.bdf.saleor.data.model.AuthState
 import com.bdf.saleor.data.model.CheckoutAuthorizeStatus
 import com.bdf.saleor.data.model.CheckoutSession
@@ -47,6 +49,9 @@ data class CheckoutUiState(
     val billingDraft: AddressDraft = AddressDraft(),
     val sameAsBilling: Boolean = true,
     val savedAddresses: List<Address> = emptyList(),
+    val selectedAddressId: String? = null,
+    val showAddressForm: Boolean = false,
+    val useSelectedAddressAsDefault: Boolean = false,
     val deliveryOptions: List<DeliveryOption> = emptyList(),
     val selectedDeliveryMethodId: String? = null,
     val pointsBalance: Double = 0.0,
@@ -80,12 +85,24 @@ data class CheckoutUiState(
 
     val currency: String
         get() = session?.total?.currency ?: "KRW"
+
+    val selectedAddress: Address?
+        get() = savedAddresses.firstOrNull { it.id == selectedAddressId }
+            ?: savedAddresses.firstOrNull { it.isDefaultShipping }
+            ?: savedAddresses.firstOrNull()
+
+    val canContinueFromContact: Boolean
+        get() = selectedAddress != null && !payBusy
+
+    val showUseAsDefaultShipping: Boolean
+        get() = loggedIn && selectedAddress != null && selectedAddress?.isDefaultShipping != true
 }
 
 @HiltViewModel
 class CheckoutViewModel @Inject constructor(
     private val checkoutRepository: CheckoutRepository,
     private val authRepository: AuthRepository,
+    private val accountRepository: AccountRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CheckoutUiState())
     val uiState: StateFlow<CheckoutUiState> = _uiState.asStateFlow()
@@ -98,11 +115,17 @@ class CheckoutViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             val loggedIn = authRepository.authState.value is AuthState.LoggedIn
-            val user = authRepository.currentUser.value
+            val user = if (loggedIn) {
+                runCatching { authRepository.getProfile() }.getOrNull() ?: authRepository.currentUser.value
+            } else {
+                authRepository.currentUser.value
+            }
             checkoutRepository.loadCheckout()
                 .onSuccess { session ->
                     val defaultAddress = user?.defaultShippingAddress
-                    val draft = defaultAddress?.toDraft() ?: session.shippingAddress?.toDraft() ?: AddressDraft()
+                        ?: user?.addresses?.firstOrNull()
+                        ?: session.shippingAddress
+                    val draft = defaultAddress?.toDraft() ?: AddressDraft()
                     val pointsBalance = user?.pointsBalance?.amount ?: 0.0
                     val showPoints = loggedIn &&
                         pointsBalance > 0 &&
@@ -116,6 +139,7 @@ class CheckoutViewModel @Inject constructor(
                             shippingDraft = draft,
                             billingDraft = session.billingAddress?.toDraft() ?: draft,
                             savedAddresses = user?.addresses.orEmpty(),
+                            selectedAddressId = defaultAddress?.id,
                             selectedDeliveryMethodId = session.selectedDeliveryMethodId,
                             pointsBalance = pointsBalance,
                             pointsCurrency = user?.pointsBalance?.currency ?: session.total?.currency ?: "KRW",
@@ -146,7 +170,99 @@ class CheckoutViewModel @Inject constructor(
     fun onSameAsBillingChange(value: Boolean) = _uiState.update { it.copy(sameAsBilling = value) }
 
     fun selectSavedAddress(address: Address) {
-        _uiState.update { it.copy(shippingDraft = address.toDraft()) }
+        _uiState.update {
+            it.copy(
+                shippingDraft = address.toDraft(),
+                selectedAddressId = address.id,
+                useSelectedAddressAsDefault = false,
+                error = null,
+            )
+        }
+    }
+
+    fun onUseSelectedAddressAsDefaultChange(checked: Boolean) {
+        _uiState.update { it.copy(useSelectedAddressAsDefault = checked) }
+    }
+
+    fun openAddressForm() = _uiState.update { it.copy(showAddressForm = true, error = null) }
+
+    fun closeAddressForm() = _uiState.update { it.copy(showAddressForm = false) }
+
+    fun reloadCustomerAddresses() {
+        if (_uiState.value.showAddressForm) return
+        viewModelScope.launch {
+            if (authRepository.authState.value !is AuthState.LoggedIn) return@launch
+            val user = runCatching { authRepository.getProfile() }.getOrNull() ?: return@launch
+            val currentId = _uiState.value.selectedAddressId
+            val selected = user.addresses.firstOrNull { it.id == currentId }
+                ?: user.defaultShippingAddress
+                ?: user.addresses.firstOrNull()
+            _uiState.update {
+                it.copy(
+                    savedAddresses = user.addresses,
+                    selectedAddressId = selected?.id,
+                    shippingDraft = selected?.toDraft() ?: it.shippingDraft,
+                    loggedIn = true,
+                )
+            }
+        }
+    }
+
+    fun createShippingAddress(draft: AddressDraft) {
+        if (!draft.isValid()) {
+            _uiState.update { it.copy(error = "배송지를 확인해 주세요") }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(payBusy = true, error = null) }
+            val loggedIn = authRepository.authState.value is AuthState.LoggedIn
+            val existing = knownShippingAddresses()
+            val existingIds = existing.map { it.id }.toSet()
+            val isFirstAddress = existing.isEmpty()
+            if (loggedIn) {
+                val result = accountRepository.createAddress(
+                    draft,
+                    defaultKind = if (isFirstAddress) AddressKind.SHIPPING else null,
+                )
+                if (!result.success) {
+                    _uiState.update { it.copy(payBusy = false, error = result.message ?: "배송지를 저장하지 못했습니다") }
+                    return@launch
+                }
+                val profile = runCatching { authRepository.getProfile() }.getOrNull()
+                val created = profile?.addresses?.firstOrNull { it.id !in existingIds }
+                    ?: draft.toAddress(id = "local-${existing.size}", isDefaultShipping = isFirstAddress)
+                val addresses = when {
+                    profile != null && profile.addresses.any { it.id == created.id } -> profile.addresses
+                    profile != null -> profile.addresses + created
+                    else -> existing + created
+                }
+                _uiState.update {
+                    it.copy(
+                        payBusy = false,
+                        showAddressForm = false,
+                        savedAddresses = addresses,
+                        selectedAddressId = created.id,
+                        shippingDraft = created.toDraft(),
+                        useSelectedAddressAsDefault = false,
+                    )
+                }
+            } else {
+                val created = draft.toAddress(
+                    id = if (isFirstAddress) "guest" else "guest-${existing.size}",
+                    isDefaultShipping = isFirstAddress,
+                )
+                _uiState.update {
+                    it.copy(
+                        payBusy = false,
+                        showAddressForm = false,
+                        savedAddresses = existing + created,
+                        selectedAddressId = created.id,
+                        shippingDraft = draft,
+                        useSelectedAddressAsDefault = false,
+                    )
+                }
+            }
+        }
     }
 
     fun onPointsInputChange(value: String) = _uiState.update { it.copy(pointsInput = value, pointsClampNotice = false) }
@@ -170,6 +286,9 @@ class CheckoutViewModel @Inject constructor(
 
     fun continueFromContact() {
         val state = _uiState.value
+        if (state.selectedAddress == null) {
+            return
+        }
         if (!state.email.contains("@") || !state.shippingDraft.isValid()) {
             _uiState.update { it.copy(error = "이메일과 배송지를 확인해 주세요") }
             return
@@ -270,7 +389,7 @@ class CheckoutViewModel @Inject constructor(
             return Result.failure(IllegalStateException("Toss 결제는 KRW만 지원합니다"))
         }
         _uiState.update { it.copy(payBusy = true, error = null, priceChangeMessage = null) }
-        val billingDraft = if (_uiState.value.sameAsBilling) _uiState.value.shippingDraft else _uiState.value.billingDraft
+        val billingDraft = _uiState.value.shippingDraft
         val billingResult = checkoutRepository.updateBillingAddress(billingDraft)
         if (billingResult.isFailure) {
             val message = billingResult.exceptionOrNull()?.message
@@ -316,10 +435,11 @@ class CheckoutViewModel @Inject constructor(
     fun completeFreeOrder() {
         viewModelScope.launch {
             _uiState.update { it.copy(confirming = true, error = null) }
-            val billingDraft = if (_uiState.value.sameAsBilling) _uiState.value.shippingDraft else _uiState.value.billingDraft
+            val billingDraft = _uiState.value.shippingDraft
             checkoutRepository.updateBillingAddress(billingDraft)
             checkoutRepository.completeCheckout()
                 .onSuccess { order ->
+                    applyDefaultShippingIfRequested()
                     _uiState.update {
                         it.copy(
                             confirming = false,
@@ -344,6 +464,7 @@ class CheckoutViewModel @Inject constructor(
                 }
             checkoutRepository.completeCheckout()
                 .onSuccess { order ->
+                    applyDefaultShippingIfRequested()
                     _uiState.update {
                         it.copy(
                             confirming = false,
@@ -368,6 +489,20 @@ class CheckoutViewModel @Inject constructor(
             .onFailure { error -> _uiState.update { it.copy(error = error.message) } }
     }
 
+    private suspend fun applyDefaultShippingIfRequested() {
+        val state = _uiState.value
+        if (!state.loggedIn || !state.useSelectedAddressAsDefault) return
+        val addressId = state.selectedAddressId ?: return
+        accountRepository.setDefaultAddress(addressId, AddressKind.SHIPPING)
+    }
+
+    private suspend fun knownShippingAddresses(): List<Address> {
+        val saved = _uiState.value.savedAddresses
+        if (authRepository.authState.value !is AuthState.LoggedIn) return saved
+        val profileAddresses = runCatching { authRepository.getProfile() }.getOrNull()?.addresses.orEmpty()
+        return profileAddresses.ifEmpty { saved }
+    }
+
     private fun Address.toDraft() = AddressDraft(
         firstName = firstName,
         lastName = lastName,
@@ -379,7 +514,25 @@ class CheckoutViewModel @Inject constructor(
         postalCode = postalCode,
         countryCode = countryCode.ifBlank { "KR" },
         countryArea = countryArea,
+        phone = displayPhone(),
+    )
+
+    private fun AddressDraft.toAddress(id: String, isDefaultShipping: Boolean = false) = Address(
+        id = id,
+        firstName = firstName,
+        lastName = lastName.ifBlank { firstName },
+        companyName = companyName,
+        streetAddress1 = streetAddress1,
+        streetAddress2 = streetAddress2,
+        city = city,
+        cityArea = cityArea,
+        postalCode = postalCode,
+        countryCode = countryCode.ifBlank { "KR" },
+        countryName = "South Korea",
+        countryArea = countryArea,
         phone = phone,
+        isDefaultShipping = isDefaultShipping,
+        isDefaultBilling = false,
     )
 
     private fun AddressDraft.isValid(): Boolean =
