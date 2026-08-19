@@ -29,10 +29,10 @@ class StorefrontChromeViewModel @Inject constructor(
         SharingStarted.WhileSubscribed(5_000),
         authRepository.currentUser.value,
     )
-    val cartQuantity: StateFlow<Int> = cartRepository.cart.map { it?.quantity ?: 0 }.stateIn(
+    val cartQuantity: StateFlow<Int> = cartRepository.cart.map { it?.lineCount ?: 0 }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
-        cartRepository.cart.value?.quantity ?: 0,
+        cartRepository.cart.value?.lineCount ?: 0,
     )
 
     init {

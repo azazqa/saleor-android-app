@@ -284,8 +284,12 @@ data class Cart(
     val subtotal: Money?,
     val shipping: Money?,
     val total: Money?,
+    /** Total units across all lines (Saleor checkout quantity). */
     val quantity: Int,
-)
+) {
+    /** Distinct line-item count shown on the cart icon badge. */
+    val lineCount: Int get() = lines.size
+}
 
 data class DeliveryOption(
     val id: String,
