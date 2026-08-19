@@ -8,10 +8,12 @@ import com.bdf.saleor.core.datastore.CheckoutStore
 import com.bdf.saleor.core.datastore.HeldCartLine
 import com.bdf.saleor.data.model.Cart
 import com.bdf.saleor.graphql.CheckoutCreateMutation
+import com.bdf.saleor.graphql.CheckoutCustomerAttachMutation
 import com.bdf.saleor.graphql.CheckoutDetailsQuery
 import com.bdf.saleor.graphql.CheckoutLinesAddMutation
 import com.bdf.saleor.graphql.CheckoutLinesDeleteMutation
 import com.bdf.saleor.graphql.CheckoutLinesUpdateMutation
+import com.bdf.saleor.graphql.CurrentUserCheckoutsQuery
 import com.bdf.saleor.graphql.fragment.CheckoutDetails
 import com.bdf.saleor.graphql.type.CheckoutLineInput
 import com.bdf.saleor.graphql.type.CheckoutLineUpdateInput
@@ -128,6 +130,19 @@ class DefaultCartRepository @Inject constructor(
         _cart.value = null
     }
 
+    override suspend fun adoptLoggedInCart() {
+        val guestId = checkoutStore.checkoutId(config.channel)
+        val guestLines = snapshotGuestLines(guestId)
+        val userCheckouts = runCatching { fetchUserCheckouts() }.getOrElse { emptyList() }
+        applyLoginPlan(planCartLogin(guestId, guestLines, userCheckouts), guestLines)
+    }
+
+    override suspend fun releaseOnLogout() {
+        runCatching { restoreParkedLines() }
+        checkoutStore.setHeldCartLines(config.channel, emptyList())
+        clearLocal()
+    }
+
     override suspend fun parkUnselectedLines(selectedLineIds: Set<String>): Result<Cart> = runCatching {
         val current = _cart.value ?: error("장바구니가 비어 있습니다")
         val remaining = current.lines.filter { it.id in selectedLineIds }
@@ -208,5 +223,70 @@ class DefaultCartRepository @Inject constructor(
         val cart = session.toCart()
         _cart.value = cart
         return cart
+    }
+
+    private suspend fun snapshotGuestLines(guestId: String?): List<HeldCartLine> {
+        val fromMemory = _cart.value?.lines.orEmpty()
+            .filter { it.quantity > 0 }
+            .map { HeldCartLine(variantId = it.variantId, quantity = it.quantity) }
+        if (fromMemory.isNotEmpty()) return fromMemory
+        if (guestId.isNullOrBlank()) return emptyList()
+        val details = runCatching { fetchCheckout(guestId) }.getOrNull() ?: return emptyList()
+        return details.lines.mapNotNull { line ->
+            val item = line.checkoutLineDetails
+            if (item.quantity <= 0 || item.variant.id.isBlank()) null
+            else HeldCartLine(variantId = item.variant.id, quantity = item.quantity)
+        }
+    }
+
+    private suspend fun fetchUserCheckouts(): List<UserCheckoutSummary> {
+        val data = apolloClient.query(CurrentUserCheckoutsQuery(channel = config.channel))
+            .fetchPolicy(FetchPolicy.NetworkOnly)
+            .execute()
+            .dataAssertNoErrors
+        return data.me?.checkouts?.edges.orEmpty().map { edge ->
+            UserCheckoutSummary(id = edge.node.id, quantity = edge.node.quantity)
+        }
+    }
+
+    private suspend fun applyLoginPlan(plan: CartLoginPlan, guestLines: List<HeldCartLine>) {
+        when {
+            plan.attachGuestCheckout -> {
+                val id = plan.targetCheckoutId ?: return
+                val attached = attachCheckout(id)
+                if (attached != null) {
+                    publish(attached)
+                } else {
+                    checkoutStore.clear(config.channel)
+                    _cart.value = null
+                    mergeLines(guestLines)
+                }
+            }
+            plan.targetCheckoutId != null -> {
+                checkoutStore.setCheckoutId(config.channel, plan.targetCheckoutId)
+                refresh()
+                mergeLines(plan.linesToMerge)
+            }
+            else -> {
+                checkoutStore.clear(config.channel)
+                _cart.value = null
+            }
+        }
+    }
+
+    private suspend fun attachCheckout(id: String): CheckoutDetails? {
+        val data = runCatching {
+            apolloClient.mutation(
+                CheckoutCustomerAttachMutation(id = id, languageCode = languageCode),
+            ).execute().dataAssertNoErrors
+        }.getOrNull() ?: return null
+        if (data.checkoutCustomerAttach?.errors.orEmpty().isNotEmpty()) return null
+        return data.checkoutCustomerAttach?.checkout?.checkoutDetails
+    }
+
+    private suspend fun mergeLines(lines: List<HeldCartLine>) {
+        lines.forEach { line ->
+            addLine(line.variantId, line.quantity)
+        }
     }
 }

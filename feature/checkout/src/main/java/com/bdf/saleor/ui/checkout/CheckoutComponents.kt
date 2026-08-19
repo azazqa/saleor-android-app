@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.Button
@@ -37,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.bdf.saleor.data.model.Address
 import com.bdf.saleor.feature.checkout.R
+import com.bdf.saleor.ui.theme.AppSpacing
 
 @Composable
 internal fun SectionCard(
@@ -56,7 +56,7 @@ internal fun SectionCard(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = if (tonal) 0.dp else 1.dp),
     ) {
-        Column(modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 18.dp)) {
+        Column(modifier = Modifier.padding(AppSpacing.CardContent)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -66,8 +66,7 @@ internal fun SectionCard(
                 Text(
                     text = title,
                     modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
                     color = colors.onSurface,
                 )
                 action?.invoke()
@@ -112,7 +111,6 @@ internal fun CheckoutChangeButton(
         Text(
             text = stringResource(R.string.checkout_summary_change),
             style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
         )
     }
@@ -132,7 +130,7 @@ internal fun AddressBlock(
     } else {
         MaterialTheme.typography.titleMedium
     }
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -140,7 +138,6 @@ internal fun AddressBlock(
             Text(
                 text = lines.name.ifBlank { lines.street },
                 style = nameStyle,
-                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             if (showDefaultBadge && address.isDefaultShipping) {
@@ -162,10 +159,10 @@ internal fun AddressBlock(
             )
         }
         if (showPhone && !compact && lines.phone.isNotBlank()) {
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Phone,
@@ -191,14 +188,13 @@ internal fun DefaultShippingBadge(compact: Boolean = false) {
         stringResource(R.string.checkout_default_shipping)
     }
     Surface(
-        shape = RoundedCornerShape(6.dp),
+        shape = MaterialTheme.shapes.small,
         color = MaterialTheme.colorScheme.secondaryContainer,
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
     }
@@ -225,8 +221,13 @@ internal fun CheckoutBottomBar(
     ) {
         HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant)
         Column(
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(
+                start = AppSpacing.ScreenHorizontal,
+                end = AppSpacing.ScreenHorizontal,
+                top = AppSpacing.CardGap,
+                bottom = AppSpacing.DividerVertical,
+            ),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.CardGap),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -241,8 +242,7 @@ internal fun CheckoutBottomBar(
                 )
                 Text(
                     text = amount,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
+                    style = MaterialTheme.typography.headlineSmall,
                     color = colors.primary,
                 )
             }
@@ -251,7 +251,7 @@ internal fun CheckoutBottomBar(
                 enabled = enabled && !busy,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(54.dp)
+                    .height(AppSpacing.ListItemMinHeight)
                     .testTag(ctaTestTag),
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(
@@ -270,8 +270,7 @@ internal fun CheckoutBottomBar(
                 }
                 Text(
                     text = ctaLabel,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
                 )
             }
         }

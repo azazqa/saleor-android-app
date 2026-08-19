@@ -16,7 +16,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -31,10 +33,17 @@ import com.bdf.saleor.ui.components.ScreenTopBar
 @Composable
 fun RegisterScreen(
     onBack: () -> Unit,
+    onRegistered: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: RegisterViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val onRegisteredUpdated by rememberUpdatedState(onRegistered)
+
+    LaunchedEffect(state.successMessage) {
+        val message = state.successMessage ?: return@LaunchedEffect
+        onRegisteredUpdated(message)
+    }
 
     Scaffold(
         modifier = modifier
@@ -89,10 +98,6 @@ fun RegisterScreen(
             if (!state.error.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(state.error.orEmpty(), color = MaterialTheme.colorScheme.error)
-            }
-            if (!state.successMessage.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(state.successMessage.orEmpty(), color = MaterialTheme.colorScheme.primary)
             }
             Spacer(modifier = Modifier.height(20.dp))
             Button(

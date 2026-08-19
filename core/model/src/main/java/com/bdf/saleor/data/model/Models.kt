@@ -311,6 +311,8 @@ data class CheckoutSession(
     val subtotal: Money?,
     val shipping: Money?,
     val discount: Money?,
+    val voucherCode: String? = null,
+    val discountName: String? = null,
     val total: Money?,
     val totalBalance: Money?,
     val shippingAddress: Address?,

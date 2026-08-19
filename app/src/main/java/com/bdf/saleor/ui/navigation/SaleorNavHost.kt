@@ -1,5 +1,6 @@
 package com.bdf.saleor.ui.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
@@ -8,32 +9,41 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -56,9 +66,13 @@ import com.bdf.saleor.ui.catalog.ProductListScreen
 import com.bdf.saleor.ui.catalog.ProductListSource
 import com.bdf.saleor.ui.catalog.ProductListViewModel
 import com.bdf.saleor.ui.category.CategoryListScreen
+import com.bdf.saleor.ui.components.AppBottomNavItem
+import com.bdf.saleor.ui.components.AppBottomNavigation
 import com.bdf.saleor.ui.components.LocalSnackbarHostState
+import com.bdf.saleor.ui.components.LocalTabReselectTick
 import com.bdf.saleor.ui.components.ScreenSurface
 import com.bdf.saleor.ui.components.StorefrontTopBar
+import com.bdf.saleor.ui.components.rememberBottomNavScrollConnection
 import com.bdf.saleor.ui.detail.ProductDetailScreen
 import com.bdf.saleor.ui.detail.ProductDetailViewModel
 import com.bdf.saleor.ui.cart.CartRoute
@@ -66,19 +80,22 @@ import com.bdf.saleor.ui.checkout.CheckoutCompleteScreen
 import com.bdf.saleor.ui.checkout.CheckoutRoute
 import com.bdf.saleor.ui.home.HomeScreen
 import com.bdf.saleor.ui.search.SearchScreen
+import kotlinx.coroutines.launch
 
 private enum class TopLevelDestination(
     val key: NavKey,
     val labelRes: Int,
-    val icon: ImageVector,
+    val iconOutlined: ImageVector,
+    val iconFilled: ImageVector,
     val testTag: String,
 ) {
-    HOME(Home, R.string.nav_home, Icons.Default.Home, "nav_home"),
-    CATEGORIES(Categories, R.string.nav_categories, Icons.Default.Category, "nav_categories"),
-    SEARCH(Search, R.string.nav_search, Icons.Default.Search, "nav_search"),
-    ACCOUNT(Account, R.string.nav_account, Icons.Default.Person, "nav_account"),
+    HOME(Home, R.string.nav_home, Icons.Outlined.Home, Icons.Filled.Home, "nav_home"),
+    CATEGORIES(Categories, R.string.nav_categories, Icons.Outlined.GridView, Icons.Filled.GridView, "nav_categories"),
+    SEARCH(Search, R.string.nav_search, Icons.Outlined.Search, Icons.Filled.Search, "nav_search"),
+    ACCOUNT(Account, R.string.nav_account, Icons.Outlined.Person, Icons.Filled.Person, "nav_account"),
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SaleorApp(
     chromeViewModel: StorefrontChromeViewModel = hiltViewModel(),
@@ -86,10 +103,23 @@ fun SaleorApp(
     val backStack = rememberNavBackStack(Home)
     val current = backStack.lastOrNull()
     val authState by chromeViewModel.authState.collectAsStateWithLifecycle()
-    val currentUser by chromeViewModel.currentUser.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
     val cartQuantity by chromeViewModel.cartQuantity.collectAsStateWithLifecycle()
     var selectedTopLevel by remember { mutableStateOf(TopLevelDestination.HOME) }
+    var tabReselectTick by remember { mutableIntStateOf(0) }
+    var bottomNavVisible by remember { mutableStateOf(true) }
+    val hideBottomNavForRoute = when (current) {
+        is Home, is Categories, is Search, is Account,
+        is Register, is ForgotPassword, is OrderDetail,
+        is ProductDetail,
+        -> false
+        else -> true
+    }
+    val topLevelScrollEnabled = current is Home ||
+        current is Categories ||
+        current is Search ||
+        current is Account
 
     LaunchedEffect(current) {
         val next = when (current) {
@@ -100,9 +130,11 @@ fun SaleorApp(
             else -> null
         }
         if (next != null) selectedTopLevel = next
+        bottomNavVisible = true
     }
 
     fun goTo(destination: NavKey) {
+        bottomNavVisible = true
         if (current != destination) {
             backStack.clear()
             backStack.add(destination)
@@ -113,57 +145,49 @@ fun SaleorApp(
         if (current !is Cart) backStack.add(Cart)
     }
 
-    CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
-        val navColors = MaterialTheme.colorScheme
-        val navigationSuiteColors = NavigationSuiteDefaults.colors(
-            navigationBarContainerColor = navColors.surfaceContainer,
-        )
-        val navigationItemColors = NavigationSuiteDefaults.itemColors(
-            navigationBarItemColors = NavigationBarItemDefaults.colors(
-                indicatorColor = navColors.secondaryContainer,
-                selectedIconColor = navColors.onSecondaryContainer,
-                selectedTextColor = navColors.onSecondaryContainer,
-                unselectedIconColor = navColors.onSurfaceVariant,
-                unselectedTextColor = navColors.onSurfaceVariant,
-            ),
-        )
-        NavigationSuiteScaffold(
-            navigationSuiteColors = navigationSuiteColors,
-            navigationSuiteItems = {
-                TopLevelDestination.entries.forEach { destination ->
-                    item(
-                        icon = {
-                            Icon(
-                                destination.icon,
-                                contentDescription = stringResource(destination.labelRes),
-                                modifier = Modifier.testTag(destination.testTag),
-                            )
-                        },
-                        label = { Text(stringResource(destination.labelRes)) },
-                        selected = destination == selectedTopLevel,
-                        colors = navigationItemColors,
-                        onClick = {
-                            selectedTopLevel = destination
-                            goTo(destination.key)
-                        },
-                    )
-                }
+    val bottomNavConnection = rememberBottomNavScrollConnection(
+        onHide = { bottomNavVisible = false },
+        onShow = { bottomNavVisible = true },
+        enabled = topLevelScrollEnabled && !hideBottomNavForRoute,
+    )
+
+    CompositionLocalProvider(
+        LocalSnackbarHostState provides snackbarHostState,
+        LocalTabReselectTick provides tabReselectTick,
+    ) {
+        // Do not apply a height constraint on this Scaffold; it collapses the content slot.
+        // Bottom nav lives in a Column (not Scaffold.bottomBar) so it cannot inherit a
+        // minHeight equal to the remaining window and swallow the content slot.
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+            contentWindowInsets = if (hideBottomNavForRoute) {
+                WindowInsets.navigationBars.only(
+                    WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                )
+            } else {
+                WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)
             },
-        ) {
-            Scaffold(
-                modifier = Modifier.fillMaxSize(),
-                containerColor = MaterialTheme.colorScheme.background,
-                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-                contentWindowInsets = WindowInsets(0, 0, 0, 0),
-            ) { innerPadding ->
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
+                        .weight(1f)
+                        .fillMaxWidth(),
                 ) {
                     NavDisplay(
                         backStack = backStack,
-                        onBack = { backStack.removeLastOrNull() },
+                        onBack = {
+                            if (current is CheckoutComplete) {
+                                goTo(Home)
+                            } else {
+                                backStack.removeLastOrNull()
+                            }
+                        },
                         transitionSpec = {
                             slideInHorizontally(
                                 animationSpec = tween(280),
@@ -196,11 +220,10 @@ fun SaleorApp(
                             entry<Home> {
                                 StorefrontTopLevel(
                                     storeName = stringResource(R.string.app_name),
-                                    initials = if (authState is AuthState.LoggedIn) currentUser?.initials else null,
                                     onStoreNameClick = { goTo(Home) },
-                                    onAccountClick = { goTo(Account) },
                                     onCartClick = openCart,
                                     cartQuantity = cartQuantity,
+                                    nestedScrollConnection = bottomNavConnection,
                                 ) {
                                     HomeScreen(
                                         onProductClick = { product -> backStack.add(ProductDetail(product.slug)) },
@@ -228,11 +251,10 @@ fun SaleorApp(
                             entry<Categories> {
                                 StorefrontTopLevel(
                                     storeName = stringResource(R.string.app_name),
-                                    initials = if (authState is AuthState.LoggedIn) currentUser?.initials else null,
                                     onStoreNameClick = { goTo(Home) },
-                                    onAccountClick = { goTo(Account) },
                                     onCartClick = openCart,
                                     cartQuantity = cartQuantity,
+                                    nestedScrollConnection = bottomNavConnection,
                                 ) {
                                     CategoryListScreen(
                                         onCategoryClick = { category ->
@@ -250,11 +272,10 @@ fun SaleorApp(
                             entry<Search> {
                                 StorefrontTopLevel(
                                     storeName = stringResource(R.string.app_name),
-                                    initials = if (authState is AuthState.LoggedIn) currentUser?.initials else null,
                                     onStoreNameClick = { goTo(Home) },
-                                    onAccountClick = { goTo(Account) },
                                     onCartClick = openCart,
                                     cartQuantity = cartQuantity,
+                                    nestedScrollConnection = bottomNavConnection,
                                 ) {
                                     SearchScreen(
                                         onProductClick = { product -> backStack.add(ProductDetail(product.slug)) },
@@ -264,11 +285,10 @@ fun SaleorApp(
                             entry<Account> {
                                 StorefrontTopLevel(
                                     storeName = stringResource(R.string.app_name),
-                                    initials = if (authState is AuthState.LoggedIn) currentUser?.initials else null,
                                     onStoreNameClick = { goTo(Home) },
-                                    onAccountClick = { goTo(Account) },
                                     onCartClick = openCart,
                                     cartQuantity = cartQuantity,
+                                    nestedScrollConnection = bottomNavConnection,
                                 ) {
                                     AccountRoute(
                                         onRegisterClick = { backStack.add(Register) },
@@ -300,12 +320,31 @@ fun SaleorApp(
                                     ProductDetailScreen(
                                         viewModel = viewModel,
                                         onBack = { backStack.removeLastOrNull() },
+                                        onCartClick = openCart,
+                                        onBuyNow = {
+                                            if (authState is AuthState.LoggedIn) {
+                                                if (current !is Checkout) backStack.add(Checkout)
+                                            } else {
+                                                backStack.add(Account)
+                                            }
+                                        },
+                                        cartQuantity = cartQuantity,
                                     )
                                 }
                             }
                             entry<Register> {
                                 ScreenSurface {
-                                    RegisterScreen(onBack = { backStack.removeLastOrNull() })
+                                    RegisterScreen(
+                                        onBack = { backStack.removeLastOrNull() },
+                                        onRegistered = { message ->
+                                            backStack.removeLastOrNull()
+                                            if (message.isNotBlank()) {
+                                                snackbarScope.launch {
+                                                    snackbarHostState.showSnackbar(message)
+                                                }
+                                            }
+                                        },
+                                    )
                                 }
                             }
                             entry<ForgotPassword> {
@@ -328,7 +367,9 @@ fun SaleorApp(
                                 ScreenSurface {
                                     CartRoute(
                                         onBack = { backStack.removeLastOrNull() },
+                                        loggedIn = authState is AuthState.LoggedIn,
                                         onCheckout = { backStack.add(Checkout) },
+                                        onLoginRequired = { backStack.add(Account) },
                                     )
                                 }
                             }
@@ -344,6 +385,7 @@ fun SaleorApp(
                                 }
                             }
                             entry<CheckoutComplete> { key ->
+                                BackHandler { goTo(Home) }
                                 ScreenSurface {
                                     CheckoutCompleteScreen(
                                         orderId = key.orderId,
@@ -358,31 +400,63 @@ fun SaleorApp(
                             }
                         },
                     )
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
+                }
+                if (!hideBottomNavForRoute) {
+                    AppBottomNavigation(
+                        items = TopLevelDestination.entries.map { destination ->
+                            AppBottomNavItem(
+                                label = stringResource(destination.labelRes),
+                                iconOutlined = destination.iconOutlined,
+                                iconFilled = destination.iconFilled,
+                                selected = destination == selectedTopLevel,
+                                testTag = destination.testTag,
+                                onClick = {
+                                    if (destination == selectedTopLevel && current == destination.key) {
+                                        bottomNavVisible = true
+                                        tabReselectTick++
+                                    } else {
+                                        selectedTopLevel = destination
+                                        goTo(destination.key)
+                                    }
+                                },
+                            )
+                        },
+                        scrollVisible = bottomNavVisible,
+                    )
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StorefrontTopLevel(
     storeName: String,
-    initials: String?,
     onStoreNameClick: () -> Unit,
-    onAccountClick: () -> Unit,
     onCartClick: () -> Unit,
     cartQuantity: Int,
+    nestedScrollConnection: NestedScrollConnection,
     content: @Composable () -> Unit,
 ) {
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     ScreenSurface {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .nestedScroll(nestedScrollConnection),
+        ) {
             StorefrontTopBar(
                 storeName = storeName,
-                initials = initials,
                 onStoreNameClick = onStoreNameClick,
-                onAccountClick = onAccountClick,
                 onCartClick = onCartClick,
                 cartQuantity = cartQuantity,
+                scrollBehavior = scrollBehavior,
             )
             Box(modifier = Modifier.weight(1f).fillMaxSize()) {
                 content()

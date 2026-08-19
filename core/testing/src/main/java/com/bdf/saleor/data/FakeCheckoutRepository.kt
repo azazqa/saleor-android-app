@@ -34,6 +34,8 @@ class FakeCheckoutRepository : CheckoutRepository {
     var shouldFailLoad: Boolean = false
     var shouldFailComplete: Boolean = false
     var priceOnNextLoad: Money? = null
+    var lastPromoCode: String? = null
+    var shouldFailPromo: Boolean = false
 
     override suspend fun loadCheckout(): Result<CheckoutSession> {
         if (shouldFailLoad) return Result.failure(IllegalStateException("load failed"))
@@ -73,6 +75,41 @@ class FakeCheckoutRepository : CheckoutRepository {
     override suspend fun updateDeliveryMethod(deliveryMethodId: String): Result<CheckoutSession> {
         lastDeliveryMethodId = deliveryMethodId
         session = session.copy(selectedDeliveryMethodId = deliveryMethodId)
+        return Result.success(session)
+    }
+
+    override suspend fun addPromoCode(promoCode: String): Result<CheckoutSession> {
+        val code = promoCode.trim()
+        if (code.isEmpty()) return Result.failure(IllegalStateException("할인 코드를 입력해 주세요"))
+        if (shouldFailPromo || code.equals("INVALID", ignoreCase = true)) {
+            return Result.failure(IllegalStateException("유효하지 않은 할인 코드입니다"))
+        }
+        lastPromoCode = code
+        val currency = session.total?.currency ?: "KRW"
+        val previous = session.discount?.amount ?: 0.0
+        val discountAmount = 1_000.0
+        val restored = (session.total?.amount ?: 0.0) + previous
+        session = session.copy(
+            voucherCode = code,
+            discountName = code,
+            discount = Money(discountAmount, currency),
+            total = Money(maxOf(0.0, restored - discountAmount), currency),
+            totalBalance = Money(maxOf(0.0, restored - discountAmount), currency),
+        )
+        return Result.success(session)
+    }
+
+    override suspend fun removePromoCode(promoCode: String): Result<CheckoutSession> {
+        lastPromoCode = null
+        val currency = session.total?.currency ?: "KRW"
+        val previous = session.discount?.amount ?: 0.0
+        session = session.copy(
+            voucherCode = null,
+            discountName = null,
+            discount = null,
+            total = Money((session.total?.amount ?: 0.0) + previous, currency),
+            totalBalance = Money((session.totalBalance?.amount ?: 0.0) + previous, currency),
+        )
         return Result.success(session)
     }
 
@@ -141,6 +178,8 @@ class FakeCheckoutRepository : CheckoutRepository {
             subtotal = Money(total, "KRW"),
             shipping = Money(0.0, "KRW"),
             discount = null,
+            voucherCode = null,
+            discountName = null,
             total = Money(total, "KRW"),
             totalBalance = Money(total, "KRW"),
             shippingAddress = null,

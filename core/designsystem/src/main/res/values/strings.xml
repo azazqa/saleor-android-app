@@ -6,6 +6,9 @@
     <string name="loading">불러오는 중…</string>
     <string name="products_empty">상품이 없습니다</string>
     <string name="cart">장바구니</string>
+    <string name="account">마이페이지</string>
+    <string name="login">로그인</string>
+    <string name="logout">로그아웃</string>
     <string name="menu">메뉴</string>
     <string name="back">‹ 뒤로</string>
     <string name="cart_coming_soon">장바구니는 준비 중입니다</string>

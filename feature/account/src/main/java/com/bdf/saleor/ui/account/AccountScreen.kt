@@ -59,7 +59,6 @@ fun AccountShell(
         AccountTabRow(
             selected = tab,
             onSelect = { tab = it },
-            onLogout = viewModel::logout,
         )
         when {
             state.isLoading && state.profile == null && tab != AccountTab.Orders -> LoadingState()

@@ -35,6 +35,7 @@ import com.bdf.saleor.ui.components.EmptyState
 import com.bdf.saleor.ui.components.ErrorState
 import com.bdf.saleor.ui.components.LoadingState
 import com.bdf.saleor.ui.components.ProductGrid
+import com.bdf.saleor.ui.theme.AppSpacing
 
 @Composable
 fun HomeScreen(
@@ -57,22 +58,23 @@ fun HomeScreen(
             products = state.featuredProducts,
             onProductClick = onProductClick,
             modifier = modifier.testTag("home_screen"),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(AppSpacing.ScreenHorizontal),
             header = {
                 Column {
                     HeroBanner()
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(AppSpacing.Section))
                     if (state.categories.isNotEmpty()) {
                         Text(
                             text = stringResource(R.string.home_categories),
-                            style = MaterialTheme.typography.headlineMedium,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(AppSpacing.InSection))
                         CategoryChips(
                             categories = state.categories,
                             onCategoryClick = onCategoryClick,
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(AppSpacing.Section))
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -81,13 +83,18 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = state.featuredTitle ?: stringResource(R.string.home_featured),
-                            style = MaterialTheme.typography.headlineMedium,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         TextButton(
                             onClick = onViewAllFeatured,
                             modifier = Modifier.testTag("home_view_all"),
                         ) {
-                            Text(stringResource(R.string.home_view_all))
+                            Text(
+                                text = stringResource(R.string.home_view_all),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
                         }
                     }
                     if (state.featuredProducts.isEmpty()) {
@@ -111,7 +118,7 @@ private fun HeroBanner() {
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.large)
             .background(MaterialTheme.colorScheme.primary)
-            .padding(24.dp),
+            .padding(AppSpacing.Section),
     ) {
         Column {
             Text(
@@ -119,7 +126,7 @@ private fun HeroBanner() {
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.onPrimary,
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(AppSpacing.CardGap))
             Text(
                 text = stringResource(R.string.home_hero_subtitle),
                 style = MaterialTheme.typography.bodyLarge,

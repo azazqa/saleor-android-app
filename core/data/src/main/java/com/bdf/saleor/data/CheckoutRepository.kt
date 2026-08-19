@@ -21,6 +21,10 @@ interface CheckoutRepository {
 
     suspend fun updateDeliveryMethod(deliveryMethodId: String): Result<CheckoutSession>
 
+    suspend fun addPromoCode(promoCode: String): Result<CheckoutSession>
+
+    suspend fun removePromoCode(promoCode: String): Result<CheckoutSession>
+
     suspend fun initializeTossClientKey(): Result<String>
 
     suspend fun initializeTransaction(gatewayId: String, amount: Double? = null): Result<PaymentResult>

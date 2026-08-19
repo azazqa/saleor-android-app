@@ -2,6 +2,7 @@ package com.bdf.saleor.ui.account
 
 import com.bdf.saleor.data.FakeAccountRepository
 import com.bdf.saleor.data.FakeAuthRepository
+import com.bdf.saleor.data.FakeCartRepository
 import com.bdf.saleor.data.FakeOrderRepository
 import com.bdf.saleor.data.model.AuthState
 import com.bdf.saleor.testing.MainDispatcherRule
@@ -35,8 +36,13 @@ class AccountViewModelTest {
     }
 
     @Test
-    fun logout_delegatesToRepository() = runTest(mainDispatcherRule.dispatcher) {
-        val repository = FakeAuthRepository(initialState = AuthState.LoggedIn("user@test.com"))
+    fun logout_releasesLocalCart() = runTest(mainDispatcherRule.dispatcher) {
+        val cart = FakeCartRepository()
+        cart.replace(FakeCartRepository.sampleCart())
+        val repository = FakeAuthRepository(
+            initialState = AuthState.LoggedIn("user@test.com"),
+            cartRepository = cart,
+        )
         val viewModel = AccountViewModel(repository, FakeAccountRepository(), FakeOrderRepository())
         advanceUntilIdle()
 
@@ -44,6 +50,8 @@ class AccountViewModelTest {
         advanceUntilIdle()
 
         assertEquals(1, repository.logoutCount)
+        assertEquals(1, cart.releaseOnLogoutCount)
+        assertEquals(null, cart.cart.value)
         assertTrue(repository.authState.value is AuthState.LoggedOut)
     }
 

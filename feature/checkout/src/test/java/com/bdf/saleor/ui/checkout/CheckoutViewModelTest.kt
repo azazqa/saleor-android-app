@@ -111,6 +111,67 @@ class CheckoutViewModelTest {
     }
 
     @Test
+    fun applyPromoCode_updatesDiscountAndTotal() = runTest(mainDispatcherRule.dispatcher) {
+        val checkout = FakeCheckoutRepository()
+        val viewModel = viewModel(checkout)
+        advanceUntilIdle()
+        viewModel.onPromoCodeInputChange("SAVE10")
+
+        viewModel.applyPromoCode()
+        advanceUntilIdle()
+
+        assertEquals("SAVE10", checkout.lastPromoCode)
+        assertEquals("SAVE10", viewModel.uiState.value.session?.voucherCode)
+        assertEquals(1_000.0, viewModel.uiState.value.session?.discount?.amount ?: -1.0, 0.0)
+        assertEquals(9_000.0, viewModel.uiState.value.session?.total?.amount ?: -1.0, 0.0)
+        assertEquals("", viewModel.uiState.value.promoCodeInput)
+    }
+
+    @Test
+    fun applyPromoCode_blank_showsError() = runTest(mainDispatcherRule.dispatcher) {
+        val checkout = FakeCheckoutRepository()
+        val viewModel = viewModel(checkout)
+        advanceUntilIdle()
+
+        viewModel.applyPromoCode()
+        advanceUntilIdle()
+
+        assertEquals(null, checkout.lastPromoCode)
+        assertTrue(viewModel.uiState.value.error?.contains("할인 코드") == true)
+    }
+
+    @Test
+    fun applyPromoCode_invalid_showsError() = runTest(mainDispatcherRule.dispatcher) {
+        val checkout = FakeCheckoutRepository()
+        val viewModel = viewModel(checkout)
+        advanceUntilIdle()
+        viewModel.onPromoCodeInputChange("INVALID")
+
+        viewModel.applyPromoCode()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.error?.contains("유효하지 않은") == true)
+        assertEquals(null, viewModel.uiState.value.session?.voucherCode)
+    }
+
+    @Test
+    fun removePromoCode_clearsDiscount() = runTest(mainDispatcherRule.dispatcher) {
+        val checkout = FakeCheckoutRepository()
+        val viewModel = viewModel(checkout)
+        advanceUntilIdle()
+        viewModel.onPromoCodeInputChange("SAVE10")
+        viewModel.applyPromoCode()
+        advanceUntilIdle()
+
+        viewModel.removePromoCode()
+        advanceUntilIdle()
+
+        assertEquals(null, viewModel.uiState.value.session?.voucherCode)
+        assertEquals(null, viewModel.uiState.value.session?.discount)
+        assertEquals(10_000.0, viewModel.uiState.value.session?.total?.amount ?: -1.0, 0.0)
+    }
+
+    @Test
     fun completeFreeOrder_setsCompletedOrderId() = runTest(mainDispatcherRule.dispatcher) {
         val checkout = FakeCheckoutRepository().apply {
             session = FakeCheckoutRepository.sampleSession(total = 0.0)

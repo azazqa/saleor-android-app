@@ -41,6 +41,7 @@ class DefaultAuthRepository @Inject constructor(
     private val tokenStore: TokenStore,
     private val apolloCache: ApolloCache,
     private val config: SaleorCatalogConfig,
+    private val cartRepository: CartRepository,
 ) : AuthRepository {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unknown)
@@ -67,8 +68,12 @@ class DefaultAuthRepository @Inject constructor(
                 } else {
                     AuthState.LoggedIn(user.email)
                 }
+                if (user != null) {
+                    runCatching { cartRepository.adoptLoggedInCart() }
+                }
             }
             .onFailure {
+                runCatching { cartRepository.releaseOnLogout() }
                 tokenStore.clear()
                 runCatching { apolloCache.clear() }
                 _currentUser.value = null
@@ -95,6 +100,7 @@ class DefaultAuthRepository @Inject constructor(
         val user = runCatching { fetchCurrentUser() }.getOrNull()
         _currentUser.value = user
         _authState.value = AuthState.LoggedIn(user?.email ?: email.trim())
+        runCatching { cartRepository.adoptLoggedInCart() }
         return AuthResult(success = true)
     }
 
@@ -154,6 +160,7 @@ class DefaultAuthRepository @Inject constructor(
     }
 
     override suspend fun logout() {
+        runCatching { cartRepository.releaseOnLogout() }
         tokenStore.clear()
         runCatching { apolloCache.clear() }
         _currentUser.value = null

@@ -1,0 +1,12 @@
+mutation CheckoutAddPromoCode($id: ID!, $promoCode: String!, $languageCode: LanguageCodeEnum!) {
+  checkoutAddPromoCode(id: $id, promoCode: $promoCode) {
+    checkout {
+      ...CheckoutDetails
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}

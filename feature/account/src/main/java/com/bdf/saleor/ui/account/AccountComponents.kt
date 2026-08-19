@@ -13,9 +13,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.SpaceDashboard
 import androidx.compose.material.icons.outlined.MonetizationOn
 import androidx.compose.material.icons.outlined.Receipt
 import androidx.compose.material.icons.outlined.Settings
@@ -38,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bdf.saleor.feature.account.R
+import com.bdf.saleor.ui.theme.AppSpacing
 
 enum class AccountTab {
     Overview,
@@ -48,26 +48,24 @@ enum class AccountTab {
 }
 
 private data class AccountTabSpec(
-    val tab: AccountTab?,
+    val tab: AccountTab,
     val icon: ImageVector,
     val labelRes: Int,
     val testTag: String,
 )
 
 private val AccountTabSpecs = listOf(
-    AccountTabSpec(AccountTab.Overview, Icons.Outlined.GridView, R.string.tab_overview, "account_tab_overview"),
+    AccountTabSpec(AccountTab.Overview, Icons.Outlined.SpaceDashboard, R.string.tab_overview, "account_tab_overview"),
     AccountTabSpec(AccountTab.Orders, Icons.Outlined.Receipt, R.string.tab_orders, "account_tab_orders"),
     AccountTabSpec(AccountTab.Points, Icons.Outlined.MonetizationOn, R.string.tab_points, "account_tab_points"),
     AccountTabSpec(AccountTab.Addresses, Icons.Outlined.LocationOn, R.string.tab_addresses, "account_tab_addresses"),
     AccountTabSpec(AccountTab.Settings, Icons.Outlined.Settings, R.string.tab_settings, "account_tab_settings"),
-    AccountTabSpec(null, Icons.AutoMirrored.Outlined.Logout, R.string.account_logout, "account_tab_logout"),
 )
 
 @Composable
 fun AccountTabRow(
     selected: AccountTab,
     onSelect: (AccountTab) -> Unit,
-    onLogout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -79,15 +77,12 @@ fun AccountTabRow(
             .padding(4.dp),
     ) {
         AccountTabSpecs.forEach { spec ->
-            val isSelected = spec.tab != null && spec.tab == selected
             AccountTabButton(
-                selected = isSelected,
+                selected = spec.tab == selected,
                 icon = spec.icon,
                 label = stringResource(spec.labelRes),
                 testTag = spec.testTag,
-                onClick = {
-                    if (spec.tab != null) onSelect(spec.tab) else onLogout()
-                },
+                onClick = { onSelect(spec.tab) },
             )
         }
     }
@@ -181,10 +176,10 @@ fun AccountCard(
 ) {
     OutlinedCard(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.large,
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(AppSpacing.CardContent),
             content = content,
         )
     }

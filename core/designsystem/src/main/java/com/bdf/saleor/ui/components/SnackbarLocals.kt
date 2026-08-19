@@ -6,3 +6,5 @@ import androidx.compose.runtime.staticCompositionLocalOf
 val LocalSnackbarHostState = staticCompositionLocalOf<SnackbarHostState> {
     error("SnackbarHostState is not provided")
 }
+
+val LocalTabReselectTick = staticCompositionLocalOf { 0 }

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -65,17 +64,22 @@ import com.bdf.saleor.ui.checkout.CheckoutStepper
 import com.bdf.saleor.ui.checkout.SectionCard
 import com.bdf.saleor.ui.checkout.SectionIconChip
 import com.bdf.saleor.ui.components.ScreenTopBar
+import com.bdf.saleor.ui.theme.AppSpacing
 
 @Composable
 fun CartRoute(
     onBack: () -> Unit,
     onCheckout: () -> Unit,
     modifier: Modifier = Modifier,
+    loggedIn: Boolean = true,
+    onLoginRequired: () -> Unit = onCheckout,
     viewModel: CartViewModel = hiltViewModel(),
 ) {
     val cart by viewModel.cart.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val onCheckoutNav by rememberUpdatedState(onCheckout)
+    val onLoginNav by rememberUpdatedState(onLoginRequired)
+    val isLoggedIn by rememberUpdatedState(loggedIn)
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.onVisible()
     }
@@ -91,7 +95,13 @@ fun CartRoute(
         onDecrement = viewModel::decrement,
         onRemove = viewModel::remove,
         onClearAll = viewModel::clearAll,
-        onCheckout = { viewModel.prepareCheckout { ready -> if (ready) onCheckoutNav() } },
+        onCheckout = {
+            if (!isLoggedIn) {
+                onLoginNav()
+            } else {
+                viewModel.prepareCheckout { ready -> if (ready) onCheckoutNav() }
+            }
+        },
         modifier = modifier,
     )
 }
@@ -177,9 +187,9 @@ fun CartScreen(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = AppSpacing.ScreenHorizontal)
                     .padding(bottom = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(AppSpacing.DividerVertical),
             ) {
                 SectionCard(
                     icon = { SectionIconChip(Icons.Outlined.ShoppingBag) },
@@ -194,7 +204,6 @@ fun CartScreen(
                             Text(
                                 text = stringResource(R.string.cart_clear_all),
                                 style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
                                 color = colors.primary,
                             )
                         }
@@ -219,7 +228,6 @@ fun CartScreen(
                         Text(
                             text = stringResource(R.string.cart_select_all),
                             style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold,
                             color = colors.onSurface,
                         )
                     }
@@ -258,7 +266,7 @@ fun CartScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     HorizontalDivider(color = colors.outlineVariant)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(AppSpacing.CardGap))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -271,13 +279,11 @@ fun CartScreen(
                                 stringResource(R.string.cart_total_excluded)
                             },
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
                             color = colors.onSurface,
                         )
                         Text(
                             text = displayTotal?.format().orEmpty(),
                             style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.ExtraBold,
                             color = colors.primary,
                         )
                     }
@@ -351,10 +357,9 @@ private fun CartEmptyState(onContinue: () -> Unit) {
         Text(
             text = stringResource(R.string.cart_empty),
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
             color = colors.onSurface,
         )
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.cart_empty_hint),
             style = MaterialTheme.typography.bodyMedium,
@@ -403,7 +408,7 @@ private fun CartLineRow(
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(64.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .background(colors.surfaceVariant),
         )
         Column(modifier = Modifier.weight(1f)) {
@@ -415,14 +420,12 @@ private fun CartLineRow(
                 Text(
                     text = line.productName,
                     modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = colors.onSurface,
                 )
                 Text(
                     text = line.totalPrice?.format().orEmpty(),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
                     color = colors.onSurface,
                 )
             }
@@ -494,7 +497,6 @@ private fun QuantityStepper(
             text = "$quantity",
             modifier = Modifier.testTag("cart_qty"),
             style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
             color = colors.onSurface,
         )
         IconButton(
@@ -527,7 +529,6 @@ private fun CartAmountRow(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
         )
     }

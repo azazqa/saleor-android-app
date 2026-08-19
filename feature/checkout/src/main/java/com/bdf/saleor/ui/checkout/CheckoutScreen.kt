@@ -25,7 +25,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -34,6 +33,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material.icons.outlined.LocalShipping
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Lock
@@ -94,6 +94,7 @@ import com.bdf.saleor.feature.checkout.R
 import com.bdf.saleor.ui.components.LoadingState
 import com.bdf.saleor.ui.components.LocalSnackbarHostState
 import com.bdf.saleor.ui.components.ScreenTopBar
+import com.bdf.saleor.ui.theme.AppSpacing
 import kotlinx.coroutines.launch
 
 @Composable
@@ -166,6 +167,9 @@ fun CheckoutRoute(
         onSelectDelivery = viewModel::selectDelivery,
         onPointsInput = viewModel::onPointsInputChange,
         onApplyPoints = viewModel::applyPoints,
+        onPromoCodeInput = viewModel::onPromoCodeInputChange,
+        onApplyPromoCode = viewModel::applyPromoCode,
+        onRemovePromoCode = viewModel::removePromoCode,
         onFreeComplete = viewModel::completeFreeOrder,
         onPayWithToss = {
             scope.launch {
@@ -192,6 +196,9 @@ fun CheckoutScreen(
     onSelectDelivery: (String) -> Unit,
     onPointsInput: (String) -> Unit,
     onApplyPoints: () -> Unit,
+    onPromoCodeInput: (String) -> Unit,
+    onApplyPromoCode: () -> Unit,
+    onRemovePromoCode: () -> Unit,
     onFreeComplete: () -> Unit,
     onPayWithToss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -301,6 +308,9 @@ fun CheckoutScreen(
                             state = state,
                             onPointsInput = onPointsInput,
                             onApplyPoints = onApplyPoints,
+                            onPromoCodeInput = onPromoCodeInput,
+                            onApplyPromoCode = onApplyPromoCode,
+                            onRemovePromoCode = onRemovePromoCode,
                             onChangePaymentAddress = onChangePaymentAddress,
                             onRegisterAddress = onRegisterAddress,
                             onEditAddress = onEditAddress,
@@ -331,10 +341,10 @@ private fun ContactStep(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = AppSpacing.ScreenHorizontal)
             .padding(bottom = 4.dp)
             .testTag("checkout_contact"),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.DividerVertical),
     ) {
         SectionCard(
             icon = { SectionIconChip(Icons.Outlined.Lock) },
@@ -351,13 +361,13 @@ private fun ContactStep(
         ) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
+                shape = MaterialTheme.shapes.small,
                 color = MaterialTheme.colorScheme.surfaceContainer,
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = AppSpacing.InSection, vertical = AppSpacing.InSection),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Lock,
@@ -369,14 +379,12 @@ private fun ContactStep(
                         Text(
                             text = stringResource(R.string.checkout_email),
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             text = state.email,
                             modifier = Modifier.testTag("checkout_email"),
                             style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -492,7 +500,7 @@ private fun AddressPickerSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         dragHandle = { BottomSheetDefaults.DragHandle() },
     ) {
         Column(
@@ -511,7 +519,6 @@ private fun AddressPickerSheet(
                     text = stringResource(R.string.checkout_select_address),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 IconButton(
@@ -541,7 +548,7 @@ private fun AddressPickerSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = maxHeight - 160.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.InSection),
                 ) {
                     items(addresses, key = { it.id }) { address ->
                         AddressPickerRow(
@@ -553,12 +560,12 @@ private fun AddressPickerSheet(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(AppSpacing.DividerVertical))
             FilledTonalButton(
                 onClick = onRegisterNew,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
+                    .height(AppSpacing.ListItemMinHeight)
                     .testTag("checkout_address_picker_add"),
                 shape = CircleShape,
             ) {
@@ -582,7 +589,7 @@ private fun AddressPickerRow(
     onEdit: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(14.dp)
+    val shape = MaterialTheme.shapes.large
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -602,7 +609,7 @@ private fun AddressPickerRow(
         color = if (selected) colors.primaryContainer else colors.surfaceContainerLowest,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 13.dp),
+            modifier = Modifier.padding(horizontal = AppSpacing.InSection, vertical = AppSpacing.CardGap),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -821,7 +828,7 @@ private fun DeliveryMethodOptions(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { option ->
             val selected = option.id == selectedId
-            val shape = RoundedCornerShape(12.dp)
+            val shape = MaterialTheme.shapes.medium
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -838,7 +845,7 @@ private fun DeliveryMethodOptions(
                         onClick = { onSelect(option.id) },
                         role = Role.RadioButton,
                     )
-                    .padding(horizontal = 10.dp, vertical = 10.dp)
+                    .padding(horizontal = AppSpacing.InSection, vertical = AppSpacing.InSection)
                     .testTag("checkout_delivery_${option.id}"),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -850,7 +857,7 @@ private fun DeliveryMethodOptions(
                 Box(
                     modifier = Modifier
                         .size(34.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .background(colors.surfaceContainerLow),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -858,15 +865,13 @@ private fun DeliveryMethodOptions(
                     Text(
                         text = initial,
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
                         color = colors.onSurface,
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         option.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = colors.onSurface,
                     )
                     val minDays = option.minDeliveryDays
@@ -881,8 +886,7 @@ private fun DeliveryMethodOptions(
                 }
                 Text(
                     option.price?.format().orEmpty(),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
                     color = colors.onSurface,
                 )
             }
@@ -895,6 +899,9 @@ private fun PaymentStep(
     state: CheckoutUiState,
     onPointsInput: (String) -> Unit,
     onApplyPoints: () -> Unit,
+    onPromoCodeInput: (String) -> Unit,
+    onApplyPromoCode: () -> Unit,
+    onRemovePromoCode: () -> Unit,
     onChangePaymentAddress: (Address) -> Unit,
     onRegisterAddress: () -> Unit,
     onEditAddress: (Address) -> Unit,
@@ -906,10 +913,10 @@ private fun PaymentStep(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = AppSpacing.ScreenHorizontal)
             .padding(bottom = 4.dp)
             .testTag("checkout_payment"),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.DividerVertical),
     ) {
         if (state.session?.isShippingRequired != false) {
             ShippingInfoCard(
@@ -927,6 +934,12 @@ private fun PaymentStep(
                 onApplyPoints = onApplyPoints,
             )
         }
+        PromoCodeCard(
+            state = state,
+            onPromoCodeInput = onPromoCodeInput,
+            onApplyPromoCode = onApplyPromoCode,
+            onRemovePromoCode = onRemovePromoCode,
+        )
         OrderSummaryCard(state = state)
         Spacer(modifier = Modifier.height(4.dp))
     }
@@ -983,14 +996,13 @@ private fun ShippingInfoCard(
         },
     ) {
         SubLabel(stringResource(R.string.checkout_sub_ship_to))
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         if (displayAddress != null) {
             AddressBlock(address = displayAddress, showPhone = true, showDefaultBadge = false)
         } else {
             Text(
                 text = draftLines.name,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             if (draftLines.street.isNotBlank()) {
@@ -1018,12 +1030,12 @@ private fun ShippingInfoCard(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Box(
                 modifier = Modifier
                     .size(38.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.surfaceContainer),
                 contentAlignment = Alignment.Center,
             ) {
@@ -1047,8 +1059,7 @@ private fun ShippingInfoCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = delivery?.name ?: stringResource(R.string.checkout_shipping),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 val minDays = delivery?.minDeliveryDays
@@ -1063,8 +1074,7 @@ private fun ShippingInfoCard(
             }
             Text(
                 text = shippingPrice?.format().orEmpty(),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
@@ -1080,7 +1090,7 @@ private fun OrderSummaryCard(state: CheckoutUiState) {
     ) {
         state.session?.lines?.forEach { line ->
             OrderLineRow(line)
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(AppSpacing.CardGap))
         }
         HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant)
         Spacer(modifier = Modifier.height(12.dp))
@@ -1094,8 +1104,13 @@ private fun OrderSummaryCard(state: CheckoutUiState) {
         )
         val discount = state.session?.discount
         if (discount != null && discount.amount > 0) {
+            val discountLabel = state.session?.discountName?.takeIf { it.isNotBlank() }
+                ?: state.session?.voucherCode?.let { code ->
+                    stringResource(R.string.checkout_promo_code_applied, code)
+                }
+                ?: stringResource(R.string.checkout_discount)
             AmountRow(
-                label = stringResource(R.string.checkout_discount),
+                label = discountLabel,
                 value = "-${discount.format()}",
                 valueColor = colors.error,
             )
@@ -1125,7 +1140,6 @@ private fun OrderSummaryCard(state: CheckoutUiState) {
                 text = state.payAmount?.let { Money(it, state.currency).format() }
                     ?: state.session?.total?.format().orEmpty(),
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold,
                 color = colors.primary,
             )
         }
@@ -1145,14 +1159,13 @@ private fun OrderLineRow(line: CartLine) {
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(52.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = line.productName,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
@@ -1190,7 +1203,6 @@ private fun AmountRow(
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
             color = valueColor,
         )
     }
@@ -1256,7 +1268,7 @@ private fun PointsCard(
                 Text(stringResource(R.string.checkout_points_apply))
             }
         }
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.checkout_points_helper),
             style = MaterialTheme.typography.bodySmall,
@@ -1265,6 +1277,81 @@ private fun PointsCard(
         if (state.pointsClampNotice) {
             Text(
                 text = stringResource(R.string.checkout_points_clamped),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PromoCodeCard(
+    state: CheckoutUiState,
+    onPromoCodeInput: (String) -> Unit,
+    onApplyPromoCode: () -> Unit,
+    onRemovePromoCode: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    val appliedCode = state.session?.voucherCode
+    SectionCard(
+        icon = { SectionIconChip(Icons.Outlined.LocalOffer) },
+        title = stringResource(R.string.checkout_promo_code),
+    ) {
+        if (!appliedCode.isNullOrBlank()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.checkout_promo_code_applied, appliedCode),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("checkout_promo_applied"),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.onSurface,
+                )
+                TextButton(
+                    onClick = onRemovePromoCode,
+                    enabled = !state.payBusy,
+                    modifier = Modifier
+                        .height(48.dp)
+                        .testTag("checkout_promo_remove"),
+                ) {
+                    Text(stringResource(R.string.checkout_promo_code_remove))
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = state.promoCodeInput,
+                    onValueChange = onPromoCodeInput,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("checkout_promo_input"),
+                    label = { Text(stringResource(R.string.checkout_promo_code_label)) },
+                    singleLine = true,
+                    enabled = !state.payBusy,
+                    shape = MaterialTheme.shapes.small,
+                )
+                Button(
+                    onClick = onApplyPromoCode,
+                    enabled = !state.payBusy && state.promoCodeInput.isNotBlank(),
+                    modifier = Modifier
+                        .height(48.dp)
+                        .testTag("checkout_promo_apply"),
+                    shape = CircleShape,
+                ) {
+                    Text(stringResource(R.string.checkout_promo_code_apply))
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = stringResource(R.string.checkout_promo_code_helper),
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
             )

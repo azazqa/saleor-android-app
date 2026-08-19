@@ -60,6 +60,7 @@ data class CheckoutUiState(
     val pointsApplied: Double = 0.0,
     val pointsClampNotice: Boolean = false,
     val showPointsSection: Boolean = false,
+    val promoCodeInput: String = "",
     val tossClientKey: String? = null,
     val payBusy: Boolean = false,
     val confirming: Boolean = false,
@@ -357,6 +358,48 @@ class CheckoutViewModel @Inject constructor(
                 pointsClampNotice = false,
                 error = null,
             )
+        }
+    }
+
+    fun onPromoCodeInputChange(value: String) {
+        _uiState.update { it.copy(promoCodeInput = value, error = null) }
+    }
+
+    fun applyPromoCode() {
+        val code = _uiState.value.promoCodeInput.trim()
+        if (code.isBlank()) {
+            _uiState.update { it.copy(error = "할인 코드를 입력해 주세요") }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(payBusy = true, error = null) }
+            checkoutRepository.addPromoCode(code)
+                .onSuccess { session ->
+                    _uiState.update {
+                        it.copy(
+                            payBusy = false,
+                            session = session,
+                            promoCodeInput = "",
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(payBusy = false, error = error.message) }
+                }
+        }
+    }
+
+    fun removePromoCode() {
+        val code = _uiState.value.session?.voucherCode ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(payBusy = true, error = null) }
+            checkoutRepository.removePromoCode(code)
+                .onSuccess { session ->
+                    _uiState.update { it.copy(payBusy = false, session = session, promoCodeInput = "") }
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(payBusy = false, error = error.message) }
+                }
         }
     }
 

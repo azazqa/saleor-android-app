@@ -12,12 +12,14 @@ import com.bdf.saleor.data.model.Money
 import com.bdf.saleor.data.model.CompletedOrder
 import com.bdf.saleor.data.model.PaymentGateways
 import com.bdf.saleor.data.model.PaymentResult
+import com.bdf.saleor.graphql.CheckoutAddPromoCodeMutation
 import com.bdf.saleor.graphql.CheckoutBillingAddressUpdateMutation
 import com.bdf.saleor.graphql.CheckoutCompleteMutation
 import com.bdf.saleor.graphql.CheckoutCustomerAttachMutation
 import com.bdf.saleor.graphql.CheckoutDeliveryMethodUpdateMutation
 import com.bdf.saleor.graphql.CheckoutDetailsQuery
 import com.bdf.saleor.graphql.CheckoutEmailUpdateMutation
+import com.bdf.saleor.graphql.CheckoutRemovePromoCodeMutation
 import com.bdf.saleor.graphql.CheckoutShippingAddressUpdateMutation
 import com.bdf.saleor.graphql.DeliveryOptionsCalculateMutation
 import com.bdf.saleor.graphql.PaymentGatewayInitializeMutation
@@ -133,6 +135,34 @@ class DefaultCheckoutRepository @Inject constructor(
         val errors = data.checkoutDeliveryMethodUpdate?.errors.orEmpty()
         if (errors.isNotEmpty()) error(errors.first().message ?: "배송 방법을 저장하지 못했습니다")
         publish(data.checkoutDeliveryMethodUpdate?.checkout?.checkoutDetails)
+    }
+
+    override suspend fun addPromoCode(promoCode: String): Result<CheckoutSession> = runCatching {
+        val id = requireId()
+        val data = apolloClient.mutation(
+            CheckoutAddPromoCodeMutation(
+                id = id,
+                promoCode = promoCode.trim(),
+                languageCode = languageCode,
+            ),
+        ).execute().dataAssertNoErrors
+        val errors = data.checkoutAddPromoCode?.errors.orEmpty()
+        if (errors.isNotEmpty()) error(errors.first().message ?: "할인 코드를 적용하지 못했습니다")
+        publish(data.checkoutAddPromoCode?.checkout?.checkoutDetails)
+    }
+
+    override suspend fun removePromoCode(promoCode: String): Result<CheckoutSession> = runCatching {
+        val id = requireId()
+        val data = apolloClient.mutation(
+            CheckoutRemovePromoCodeMutation(
+                id = id,
+                promoCode = Optional.present(promoCode.trim()),
+                languageCode = languageCode,
+            ),
+        ).execute().dataAssertNoErrors
+        val errors = data.checkoutRemovePromoCode?.errors.orEmpty()
+        if (errors.isNotEmpty()) error(errors.first().message ?: "할인 코드를 해제하지 못했습니다")
+        publish(data.checkoutRemovePromoCode?.checkout?.checkoutDetails)
     }
 
     override suspend fun initializeTossClientKey(): Result<String> = runCatching {

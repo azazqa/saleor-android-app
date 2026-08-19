@@ -19,7 +19,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -49,6 +48,7 @@ fun AccountSettingsTab(
     var editName by remember { mutableStateOf(false) }
     var changePassword by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var confirmLogout by remember { mutableStateOf(false) }
     val profile = state.profile
 
     Column(
@@ -146,11 +146,14 @@ fun AccountSettingsTab(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        OutlinedButton(
-            onClick = viewModel::logout,
+        TextButton(
+            onClick = { confirmLogout = true },
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("account_logout"),
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
         ) {
             Text(stringResource(R.string.account_logout))
         }
@@ -238,6 +241,32 @@ fun AccountSettingsTab(
             },
             dismissButton = {
                 TextButton(onClick = { changePassword = false }) { Text(stringResource(R.string.settings_delete_cancel)) }
+            },
+        )
+    }
+
+    if (confirmLogout) {
+        AlertDialog(
+            onDismissRequest = { confirmLogout = false },
+            title = { Text(stringResource(R.string.logout_confirm_title)) },
+            text = { Text(stringResource(R.string.logout_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmLogout = false
+                        viewModel.logout()
+                    },
+                    modifier = Modifier.testTag("account_logout_confirm"),
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                ) { Text(stringResource(R.string.account_logout)) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { confirmLogout = false },
+                    modifier = Modifier.testTag("account_logout_cancel"),
+                ) { Text(stringResource(R.string.logout_confirm_cancel)) }
             },
         )
     }

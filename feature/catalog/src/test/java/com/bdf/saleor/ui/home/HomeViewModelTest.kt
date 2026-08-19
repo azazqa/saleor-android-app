@@ -28,7 +28,7 @@ class HomeViewModelTest {
         assertFalse(state.isLoading)
         assertNull(state.error)
         assertEquals("Featured", state.featuredTitle)
-        assertEquals(1, state.featuredProducts.size)
+        assertEquals(6, state.featuredProducts.size)
         assertEquals("Tea", state.featuredProducts.first().name)
         assertEquals(1, state.categories.size)
     }

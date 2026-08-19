@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Saleor Store</string>
+    <string name="app_name">베이비 스토어</string>
     <string name="nav_home">홈</string>
     <string name="nav_categories">카테고리</string>
     <string name="nav_search">검색</string>

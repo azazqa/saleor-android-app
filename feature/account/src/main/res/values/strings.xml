@@ -26,6 +26,9 @@
     <string name="account_password_too_short">비밀번호는 8자 이상이어야 합니다</string>
     <string name="account_orders">내 주문</string>
     <string name="account_logout">로그아웃</string>
+    <string name="logout_confirm_title">로그아웃할까요?</string>
+    <string name="logout_confirm_body">장바구니에 담은 상품은 다시 로그인하면 그대로 있어요.</string>
+    <string name="logout_confirm_cancel">취소</string>
     <string name="orders_title">주문</string>
     <string name="orders_empty">아직 주문 내역이 없습니다.</string>
     <string name="orders_none_yet">아직 주문 없음</string>

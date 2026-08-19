@@ -26,6 +26,7 @@ data class ProductDetailUiState(
     val descriptionText: String = "",
     val addingToCart: Boolean = false,
     val addToCartMessage: String? = null,
+    val buyNowReady: Boolean = false,
 ) {
     val selectedVariant: ProductVariant?
         get() = product?.variants?.firstOrNull { it.id == selectedVariantId }
@@ -88,13 +89,27 @@ class ProductDetailViewModel @AssistedInject constructor(
     }
 
     fun addToCart() {
+        addToCart(navigateToCheckout = false)
+    }
+
+    fun buyNow() {
+        addToCart(navigateToCheckout = true)
+    }
+
+    private fun addToCart(navigateToCheckout: Boolean) {
         val variantId = uiState.value.selectedVariant?.id ?: return
         if (_uiState.value.addingToCart) return
         viewModelScope.launch {
-            _uiState.update { it.copy(addingToCart = true, addToCartMessage = null) }
+            _uiState.update { it.copy(addingToCart = true, addToCartMessage = null, buyNowReady = false) }
             cartRepository.addLine(variantId)
                 .onSuccess {
-                    _uiState.update { it.copy(addingToCart = false, addToCartMessage = "added") }
+                    _uiState.update {
+                        it.copy(
+                            addingToCart = false,
+                            addToCartMessage = if (navigateToCheckout) null else "added",
+                            buyNowReady = navigateToCheckout,
+                        )
+                    }
                 }
                 .onFailure { error ->
                     _uiState.update { it.copy(addingToCart = false, addToCartMessage = error.message) }
@@ -104,6 +119,10 @@ class ProductDetailViewModel @AssistedInject constructor(
 
     fun consumeAddToCartMessage() {
         _uiState.update { it.copy(addToCartMessage = null) }
+    }
+
+    fun consumeBuyNow() {
+        _uiState.update { it.copy(buyNowReady = false) }
     }
 
     @AssistedFactory

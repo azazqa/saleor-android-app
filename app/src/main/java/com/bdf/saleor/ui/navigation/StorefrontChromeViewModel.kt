@@ -38,8 +38,4 @@ class StorefrontChromeViewModel @Inject constructor(
     init {
         viewModelScope.launch { cartRepository.refresh() }
     }
-
-    fun logout() {
-        viewModelScope.launch { authRepository.logout() }
-    }
 }

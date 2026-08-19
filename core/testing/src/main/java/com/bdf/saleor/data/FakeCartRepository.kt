@@ -18,6 +18,8 @@ class FakeCartRepository : CartRepository {
     var lastAddedVariantId: String? = null
     var refreshCount: Int = 0
     var clearCount: Int = 0
+    var adoptLoggedInCount: Int = 0
+    var releaseOnLogoutCount: Int = 0
 
     override suspend fun refresh() {
         refreshCount += 1
@@ -80,6 +82,17 @@ class FakeCartRepository : CartRepository {
     override suspend fun clearLocal() {
         clearCount += 1
         _cart.value = null
+    }
+
+    override suspend fun adoptLoggedInCart() {
+        adoptLoggedInCount += 1
+    }
+
+    override suspend fun releaseOnLogout() {
+        releaseOnLogoutCount += 1
+        restoreParkedLines()
+        parkedLines = emptyList()
+        clearLocal()
     }
 
     override suspend fun parkUnselectedLines(selectedLineIds: Set<String>): Result<Cart> {

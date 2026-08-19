@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.bdf.saleor.core.designsystem.R
 import com.bdf.saleor.data.model.ProductSummary
+import com.bdf.saleor.ui.theme.AppSpacing
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
@@ -48,14 +49,14 @@ fun ProductCard(
     ElevatedCard(
         onClick = onClick,
         modifier = modifier.testTag("product_card_${product.slug}"),
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.large,
     ) {
-        Column(modifier = Modifier.padding(8.dp)) {
+        Column(modifier = Modifier.padding(AppSpacing.CardContent)) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(MaterialTheme.shapes.small)
+                    .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             ) {
                 AsyncImage(
@@ -65,10 +66,10 @@ fun ProductCard(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(AppSpacing.CardGap))
             Text(
                 text = product.name,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -76,7 +77,7 @@ fun ProductCard(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = product.price?.format() ?: stringResource(R.string.price_unavailable),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
@@ -91,10 +92,16 @@ fun ProductGrid(
     isLoadingMore: Boolean = false,
     hasNextPage: Boolean = false,
     onLoadMore: (() -> Unit)? = null,
-    contentPadding: PaddingValues = PaddingValues(16.dp),
+    contentPadding: PaddingValues = PaddingValues(AppSpacing.ScreenHorizontal),
     header: (@Composable () -> Unit)? = null,
 ) {
     val gridState = rememberLazyGridState()
+    val reselectTick = LocalTabReselectTick.current
+    LaunchedEffect(reselectTick) {
+        if (reselectTick > 0) {
+            gridState.animateScrollToItem(0)
+        }
+    }
     if (onLoadMore != null) {
         InfiniteGridHandler(
             listState = gridState,
@@ -111,8 +118,8 @@ fun ProductGrid(
             .fillMaxSize()
             .testTag("product_grid"),
         contentPadding = contentPadding,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.CardGap),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.CardGap),
     ) {
         if (header != null) {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -130,7 +137,7 @@ fun ProductGrid(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(AppSpacing.ScreenHorizontal),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator()

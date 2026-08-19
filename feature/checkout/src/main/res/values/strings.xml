@@ -60,6 +60,13 @@
     <string name="checkout_summary_method">배송 방법</string>
     <string name="checkout_summary_change">변경</string>
     <string name="checkout_discount">할인</string>
+    <string name="checkout_promo_code">할인 코드</string>
+    <string name="checkout_promo_code_label">할인 코드 입력</string>
+    <string name="checkout_promo_code_apply">적용</string>
+    <string name="checkout_promo_code_remove">삭제</string>
+    <string name="checkout_promo_code_applied">%1$s 적용됨</string>
+    <string name="checkout_promo_code_empty">할인 코드를 입력해 주세요</string>
+    <string name="checkout_promo_code_helper">보유한 할인 코드를 입력하세요</string>
     <string name="checkout_complete_number">주문번호 %1$s</string>
     <string name="checkout_toss_amount">결제 금액 %1$s원</string>
     <string name="checkout_toss_cancelled">결제가 취소되었습니다</string>

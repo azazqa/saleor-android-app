@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
@@ -16,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -29,6 +31,7 @@ import com.bdf.saleor.feature.catalog.R
 import com.bdf.saleor.ui.components.EmptyState
 import com.bdf.saleor.ui.components.ErrorState
 import com.bdf.saleor.ui.components.LoadingState
+import com.bdf.saleor.ui.components.LocalTabReselectTick
 
 @Composable
 fun CategoryListScreen(
@@ -55,18 +58,28 @@ fun CategoryListScreen(
                 onRetry = viewModel::refresh,
             )
             state.categories.isEmpty() -> EmptyState(message = stringResource(DesignR.string.products_empty))
-            else -> LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                items(state.categories, key = { it.id }) { category ->
-                    CategoryRow(category = category, onClick = { onCategoryClick(category) })
-                    category.children.forEach { child ->
-                        CategoryRow(
-                            category = child,
-                            onClick = { onCategoryClick(child) },
-                            indented = true,
-                        )
+            else -> {
+                val listState = rememberLazyListState()
+                val reselectTick = LocalTabReselectTick.current
+                LaunchedEffect(reselectTick) {
+                    if (reselectTick > 0) {
+                        listState.animateScrollToItem(0)
+                    }
+                }
+                LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(state.categories, key = { it.id }) { category ->
+                        CategoryRow(category = category, onClick = { onCategoryClick(category) })
+                        category.children.forEach { child ->
+                            CategoryRow(
+                                category = child,
+                                onClick = { onCategoryClick(child) },
+                                indented = true,
+                            )
+                        }
                     }
                 }
             }

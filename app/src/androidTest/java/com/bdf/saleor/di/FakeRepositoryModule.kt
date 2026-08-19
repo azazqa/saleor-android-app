@@ -31,7 +31,12 @@ object FakeRepositoryModule {
 
     @Provides
     @Singleton
-    fun provideAuthRepository(): AuthRepository = FakeAuthRepository()
+    fun provideCartRepository(): CartRepository = FakeCartRepository()
+
+    @Provides
+    @Singleton
+    fun provideAuthRepository(cartRepository: CartRepository): AuthRepository =
+        FakeAuthRepository(cartRepository = cartRepository)
 
     @Provides
     @Singleton
@@ -40,10 +45,6 @@ object FakeRepositoryModule {
     @Provides
     @Singleton
     fun provideAccountRepository(): AccountRepository = FakeAccountRepository()
-
-    @Provides
-    @Singleton
-    fun provideCartRepository(): CartRepository = FakeCartRepository()
 
     @Provides
     @Singleton

@@ -12,7 +12,14 @@ import com.bdf.saleor.data.model.VariantOption
 class FakeCatalogRepository : CatalogRepository {
     var homeCatalog: HomeCatalog = HomeCatalog(
         featuredTitle = "Featured",
-        featuredProducts = listOf(sampleProduct("1", "Tea")),
+        featuredProducts = listOf(
+            sampleProduct("1", "Tea"),
+            sampleProduct("3", "Mug"),
+            sampleProduct("4", "Cup"),
+            sampleProduct("5", "Pot"),
+            sampleProduct("6", "Kettle"),
+            sampleProduct("7", "Filter"),
+        ),
         categories = listOf(CategoryItem("c1", "Drinks", "drinks", null)),
     )
     var searchResults: ProductPage = ProductPage(

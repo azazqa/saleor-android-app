@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class FakeAuthRepository(
     initialState: AuthState = AuthState.LoggedOut,
+    private val cartRepository: CartRepository? = null,
 ) : AuthRepository {
     var profile: UserProfile = UserProfile(
         id = "u1",
@@ -39,6 +40,7 @@ class FakeAuthRepository(
         profile = profile.copy(email = email)
         _currentUser.value = profile
         _authState.value = AuthState.LoggedIn(email)
+        cartRepository?.adoptLoggedInCart()
         return AuthResult(true)
     }
 
@@ -58,6 +60,7 @@ class FakeAuthRepository(
 
     override suspend fun logout() {
         logoutCount += 1
+        cartRepository?.releaseOnLogout()
         _currentUser.value = null
         _authState.value = AuthState.LoggedOut
     }

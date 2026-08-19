@@ -84,4 +84,22 @@ class ProductDetailViewModelTest {
         assertEquals("added", viewModel.uiState.value.addToCartMessage)
         assertEquals(1, cart.cart.value?.quantity)
     }
+
+    @Test
+    fun buyNow_setsBuyNowReady() = runTest(mainDispatcherRule.dispatcher) {
+        val cart = FakeCartRepository()
+        val viewModel = ProductDetailViewModel(
+            repository = FakeCatalogRepository(),
+            cartRepository = cart,
+            slug = "tea",
+        )
+        advanceUntilIdle()
+
+        viewModel.buyNow()
+        advanceUntilIdle()
+
+        assertEquals("v1", cart.lastAddedVariantId)
+        assertTrue(viewModel.uiState.value.buyNowReady)
+        assertNull(viewModel.uiState.value.addToCartMessage)
+    }
 }
