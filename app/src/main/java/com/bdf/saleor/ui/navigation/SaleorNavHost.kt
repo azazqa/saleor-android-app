@@ -1,10 +1,8 @@
 package com.bdf.saleor.ui.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -189,28 +187,13 @@ fun SaleorApp(
                             }
                         },
                         transitionSpec = {
-                            slideInHorizontally(
-                                animationSpec = tween(280),
-                                initialOffsetX = { it },
-                            ) togetherWith ExitTransition.KeepUntilTransitionsFinished
+                            EnterTransition.None togetherWith ExitTransition.None
                         },
                         popTransitionSpec = {
-                            slideInHorizontally(
-                                animationSpec = tween(280),
-                                initialOffsetX = { -it / 4 },
-                            ) togetherWith slideOutHorizontally(
-                                animationSpec = tween(280),
-                                targetOffsetX = { it },
-                            )
+                            EnterTransition.None togetherWith ExitTransition.None
                         },
                         predictivePopTransitionSpec = {
-                            slideInHorizontally(
-                                animationSpec = tween(280),
-                                initialOffsetX = { -it / 4 },
-                            ) togetherWith slideOutHorizontally(
-                                animationSpec = tween(280),
-                                targetOffsetX = { it },
-                            )
+                            EnterTransition.None togetherWith ExitTransition.None
                         },
                         entryDecorators = listOf(
                             rememberSaveableStateHolderNavEntryDecorator(),
@@ -322,11 +305,7 @@ fun SaleorApp(
                                         onBack = { backStack.removeLastOrNull() },
                                         onCartClick = openCart,
                                         onBuyNow = {
-                                            if (authState is AuthState.LoggedIn) {
-                                                if (current !is Checkout) backStack.add(Checkout)
-                                            } else {
-                                                backStack.add(Account)
-                                            }
+                                            if (current !is Cart) backStack.add(Cart)
                                         },
                                         cartQuantity = cartQuantity,
                                     )

@@ -33,6 +33,7 @@ object CatalogConfigModule {
             checkoutCountry = BuildConfig.SALEOR_CHECKOUT_COUNTRY,
             featuredCollectionSlug = BuildConfig.FEATURED_COLLECTION_SLUG,
             storefrontUrl = BuildConfig.SALEOR_STOREFRONT_URL,
+            cmsUrl = BuildConfig.SALEOR_CMS_URL,
         )
     }
 }

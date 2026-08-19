@@ -29,6 +29,7 @@ class DefaultCatalogRepository @Inject constructor(
     private val config: SaleorCatalogConfig,
 ) : CatalogRepository {
     private val channel: String get() = config.channel
+    private val cmsApi = ProductCmsApi(config.cmsUrl)
     private val featuredCollectionSlug: String get() = config.featuredCollectionSlug
     private val languageCode: LanguageCodeEnum
         get() = LanguageCodeEnum.safeValueOf(config.graphqlLanguageCode)
@@ -195,7 +196,7 @@ class DefaultCatalogRepository @Inject constructor(
                 languageCode = languageCode,
             ),
         )
-            .fetchPolicy(FetchPolicy.CacheFirst)
+            .fetchPolicy(FetchPolicy.NetworkFirst)
             .execute()
             .dataAssertNoErrors
         val product = data.product ?: return null
@@ -205,16 +206,20 @@ class DefaultCatalogRepository @Inject constructor(
             .ifEmpty { listOfNotNull(product.thumbnail?.url) }
         val startGross = product.pricing?.priceRange?.start?.gross
         val stopGross = product.pricing?.priceRange?.stop?.gross
+        val cmsBlocks = cmsApi.fetchBlocks(product.slug)
         return ProductDetail(
             id = product.id,
             name = product.translation?.name ?: product.name,
             slug = product.slug,
-            descriptionJson = (product.translation?.description ?: product.description) as? String,
+            descriptionJson = jsonScalarToString(product.translation?.description)
+                ?: jsonScalarToString(product.description)
+                ?: jsonScalarToString(product.descriptionJson),
             mediaUrls = mediaUrls,
             priceRangeStart = startGross?.let { Money(it.amount, it.currency) },
             priceRangeStop = stopGross?.let { Money(it.amount, it.currency) },
             categoryName = product.category?.translation?.name ?: product.category?.name,
             categorySlug = product.category?.slug,
+            cmsBlocks = cmsBlocks,
             variants = product.variants.orEmpty().mapNotNull { variant ->
                 variant?.let {
                     val priceGross = it.pricing?.price?.gross

@@ -7,6 +7,8 @@ import com.bdf.saleor.data.CatalogRepository
 import com.bdf.saleor.data.model.Money
 import com.bdf.saleor.data.model.ProductDetail
 import com.bdf.saleor.data.model.ProductVariant
+import com.bdf.saleor.ui.util.EditorJsBlock
+import com.bdf.saleor.ui.util.parseEditorJsBlocks
 import com.bdf.saleor.ui.util.parseEditorJsDescription
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
@@ -24,6 +26,7 @@ data class ProductDetailUiState(
     val product: ProductDetail? = null,
     val selectedVariantId: String? = null,
     val descriptionText: String = "",
+    val descriptionBlocks: List<EditorJsBlock> = emptyList(),
     val addingToCart: Boolean = false,
     val addToCartMessage: String? = null,
     val buyNowReady: Boolean = false,
@@ -72,6 +75,7 @@ class ProductDetailViewModel @AssistedInject constructor(
                                 product = product,
                                 selectedVariantId = product.variants.firstOrNull()?.id,
                                 descriptionText = parseEditorJsDescription(product.descriptionJson),
+                                descriptionBlocks = parseEditorJsBlocks(product.descriptionJson),
                             )
                         }
                     }
@@ -89,14 +93,14 @@ class ProductDetailViewModel @AssistedInject constructor(
     }
 
     fun addToCart() {
-        addToCart(navigateToCheckout = false)
+        addToCart(navigateToCart = false)
     }
 
     fun buyNow() {
-        addToCart(navigateToCheckout = true)
+        addToCart(navigateToCart = true)
     }
 
-    private fun addToCart(navigateToCheckout: Boolean) {
+    private fun addToCart(navigateToCart: Boolean) {
         val variantId = uiState.value.selectedVariant?.id ?: return
         if (_uiState.value.addingToCart) return
         viewModelScope.launch {
@@ -106,8 +110,8 @@ class ProductDetailViewModel @AssistedInject constructor(
                     _uiState.update {
                         it.copy(
                             addingToCart = false,
-                            addToCartMessage = if (navigateToCheckout) null else "added",
-                            buyNowReady = navigateToCheckout,
+                            addToCartMessage = if (navigateToCart) null else "added",
+                            buyNowReady = navigateToCart,
                         )
                     }
                 }

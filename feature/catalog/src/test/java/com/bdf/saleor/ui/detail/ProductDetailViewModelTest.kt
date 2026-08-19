@@ -2,6 +2,7 @@ package com.bdf.saleor.ui.detail
 
 import com.bdf.saleor.data.FakeCartRepository
 import com.bdf.saleor.data.FakeCatalogRepository
+import com.bdf.saleor.data.model.ProductCmsBlock
 import com.bdf.saleor.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -35,6 +36,27 @@ class ProductDetailViewModelTest {
         assertEquals("v1", state.selectedVariantId)
         assertEquals(10.0, state.displayPrice?.amount ?: -1.0, 0.0)
         assertTrue(state.descriptionText.contains("Nice tea"))
+        assertTrue(state.descriptionBlocks.isNotEmpty())
+        assertTrue(state.product?.cmsBlocks.isNullOrEmpty())
+    }
+
+    @Test
+    fun refresh_exposesCmsBlocks() = runTest(mainDispatcherRule.dispatcher) {
+        val repository = FakeCatalogRepository().apply {
+            productDetail = FakeCatalogRepository.sampleDetail().copy(
+                cmsBlocks = listOf(ProductCmsBlock.Heading("상품설명", 1)),
+            )
+        }
+        val viewModel = ProductDetailViewModel(
+            repository = repository,
+            cartRepository = FakeCartRepository(),
+            slug = "tea",
+        )
+        advanceUntilIdle()
+
+        val heading = viewModel.uiState.value.product?.cmsBlocks?.single() as ProductCmsBlock.Heading
+        assertEquals("상품설명", heading.text)
+        assertEquals(1, heading.level)
     }
 
     @Test

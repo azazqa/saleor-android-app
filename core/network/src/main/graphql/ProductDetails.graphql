@@ -4,6 +4,7 @@ query ProductDetails($slug: String!, $channel: String!, $languageCode: LanguageC
     name
     slug
     description
+    descriptionJson
     translation(languageCode: $languageCode) {
       name
       description

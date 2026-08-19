@@ -13,6 +13,8 @@ data class SaleorCatalogConfig(
     val checkoutCountry: String,
     val featuredCollectionSlug: String,
     val storefrontUrl: String,
+    /** Strapi CMS base URL used for extra product-detail blocks. */
+    val cmsUrl: String,
 ) {
     val graphqlLanguageCode: String get() = locale.uppercase()
 

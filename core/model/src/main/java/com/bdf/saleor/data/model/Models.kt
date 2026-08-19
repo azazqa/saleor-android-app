@@ -72,7 +72,15 @@ data class ProductDetail(
     val categoryName: String?,
     val categorySlug: String?,
     val variants: List<ProductVariant>,
+    val cmsBlocks: List<ProductCmsBlock> = emptyList(),
 )
+
+sealed class ProductCmsBlock {
+    data class Heading(val text: String, val level: Int) : ProductCmsBlock()
+    data class Paragraph(val text: String) : ProductCmsBlock()
+    data class Image(val url: String, val alt: String?) : ProductCmsBlock()
+    data class Quote(val title: String?, val body: String?) : ProductCmsBlock()
+}
 
 data class HomeCatalog(
     val featuredTitle: String?,

@@ -34,6 +34,10 @@ val saleorStorefrontUrl = saleorProperty(
     "saleor.storefront.url",
     "https://saleor.klms.co.kr",
 )
+val saleorCmsUrl = saleorProperty(
+    "saleor.cms.url",
+    "https://saleor-cms.klms.co.kr",
+)
 
 android {
     namespace = "com.bdf.saleor.core.network"
@@ -44,6 +48,7 @@ android {
         buildConfigField("String", "SALEOR_CHECKOUT_COUNTRY", "\"$saleorCheckoutCountry\"")
         buildConfigField("String", "FEATURED_COLLECTION_SLUG", "\"$saleorFeaturedCollection\"")
         buildConfigField("String", "SALEOR_STOREFRONT_URL", "\"$saleorStorefrontUrl\"")
+        buildConfigField("String", "SALEOR_CMS_URL", "\"$saleorCmsUrl\"")
     }
     buildFeatures {
         buildConfig = true
@@ -54,6 +59,7 @@ apollo {
     service("service") {
         packageName.set("com.bdf.saleor.graphql")
         mapScalar("JSON", "kotlin.Any")
+        mapScalar("JSONString", "kotlin.String")
         introspection {
             endpointUrl.set(saleorApiUrl)
             schemaFile.set(file("src/main/graphql/schema.graphqls"))
