@@ -4,6 +4,7 @@ plugins {
     id("saleor.android.library")
     id("saleor.android.hilt")
     alias(libs.plugins.apollo)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 val localProperties = Properties().apply {
@@ -74,4 +75,7 @@ dependencies {
     api(libs.apollo.normalized.cache)
     api(libs.apollo.normalized.cache.sqlite)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    testImplementation(libs.junit)
 }

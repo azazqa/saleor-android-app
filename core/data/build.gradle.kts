@@ -9,7 +9,7 @@ android {
 
 dependencies {
     api(project(":core:model"))
-    implementation(project(":core:network"))
+    api(project(":core:network"))
     implementation(project(":core:datastore"))
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)

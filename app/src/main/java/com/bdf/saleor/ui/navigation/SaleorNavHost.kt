@@ -1,4 +1,4 @@
-package com.bdf.saleor.ui.navigation
+﻿package com.bdf.saleor.ui.navigation
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.EnterTransition
@@ -52,32 +52,31 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.bdf.saleor.R
-import com.bdf.saleor.core.network.BuildConfig
-import com.bdf.saleor.data.model.AuthState
-import com.bdf.saleor.ui.account.AccountRoute
-import com.bdf.saleor.ui.account.ForgotPasswordScreen
-import com.bdf.saleor.ui.account.OrderDetailScreen
-import com.bdf.saleor.ui.account.OrderDetailViewModel
-import com.bdf.saleor.ui.account.RegisterScreen
-import com.bdf.saleor.ui.catalog.ProductListArgs
-import com.bdf.saleor.ui.catalog.ProductListScreen
-import com.bdf.saleor.ui.catalog.ProductListSource
-import com.bdf.saleor.ui.catalog.ProductListViewModel
-import com.bdf.saleor.ui.category.CategoryListScreen
-import com.bdf.saleor.ui.components.AppBottomNavItem
-import com.bdf.saleor.ui.components.AppBottomNavigation
-import com.bdf.saleor.ui.components.LocalSnackbarHostState
-import com.bdf.saleor.ui.components.LocalTabReselectTick
-import com.bdf.saleor.ui.components.ScreenSurface
-import com.bdf.saleor.ui.components.StorefrontTopBar
-import com.bdf.saleor.ui.components.rememberBottomNavScrollConnection
-import com.bdf.saleor.ui.detail.ProductDetailScreen
-import com.bdf.saleor.ui.detail.ProductDetailViewModel
-import com.bdf.saleor.ui.cart.CartRoute
-import com.bdf.saleor.ui.checkout.CheckoutCompleteScreen
-import com.bdf.saleor.ui.checkout.CheckoutRoute
-import com.bdf.saleor.ui.home.HomeScreen
-import com.bdf.saleor.ui.search.SearchScreen
+import com.bdf.saleor.core.model.AuthState
+import com.bdf.saleor.feature.account.AccountRoute
+import com.bdf.saleor.feature.account.ForgotPasswordScreen
+import com.bdf.saleor.feature.account.OrderDetailScreen
+import com.bdf.saleor.feature.account.OrderDetailViewModel
+import com.bdf.saleor.feature.account.RegisterScreen
+import com.bdf.saleor.feature.catalog.list.ProductListArgs
+import com.bdf.saleor.feature.catalog.list.ProductListScreen
+import com.bdf.saleor.feature.catalog.list.ProductListSource
+import com.bdf.saleor.feature.catalog.list.ProductListViewModel
+import com.bdf.saleor.feature.catalog.category.CategoryListScreen
+import com.bdf.saleor.core.designsystem.components.AppBottomNavItem
+import com.bdf.saleor.core.designsystem.components.AppBottomNavigation
+import com.bdf.saleor.core.designsystem.components.LocalSnackbarHostState
+import com.bdf.saleor.core.designsystem.components.LocalTabReselectTick
+import com.bdf.saleor.core.designsystem.components.ScreenSurface
+import com.bdf.saleor.core.designsystem.components.StorefrontTopBar
+import com.bdf.saleor.core.designsystem.components.rememberBottomNavScrollConnection
+import com.bdf.saleor.feature.catalog.detail.ProductDetailScreen
+import com.bdf.saleor.feature.catalog.detail.ProductDetailViewModel
+import com.bdf.saleor.feature.checkout.cart.CartRoute
+import com.bdf.saleor.feature.checkout.checkout.CheckoutCompleteScreen
+import com.bdf.saleor.feature.checkout.checkout.CheckoutRoute
+import com.bdf.saleor.feature.catalog.home.HomeScreen
+import com.bdf.saleor.feature.catalog.search.SearchScreen
 import kotlinx.coroutines.launch
 
 private enum class TopLevelDestination(
@@ -223,7 +222,7 @@ fun SaleorApp(
                                             backStack.add(
                                                 ProductList(
                                                     source = ProductListSource.COLLECTION,
-                                                    slug = BuildConfig.FEATURED_COLLECTION_SLUG,
+                                                    slug = chromeViewModel.featuredCollectionSlug,
                                                     title = "Featured",
                                                 ),
                                             )

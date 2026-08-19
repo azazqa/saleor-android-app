@@ -33,5 +33,9 @@ gradlePlugin {
             id = "saleor.android.application.compose"
             implementationClass = "AndroidApplicationComposeConventionPlugin"
         }
+        register("androidFeature") {
+            id = "saleor.android.feature"
+            implementationClass = "AndroidFeatureConventionPlugin"
+        }
     }
 }
