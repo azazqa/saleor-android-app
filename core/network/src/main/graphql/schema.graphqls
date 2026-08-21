@@ -534,6 +534,13 @@ type Query {
   membershipTiers: [MembershipTier!]
 
   """
+  List anonymous product favorites for the given token. Limited to 100 entries, newest first.
+
+  Added in Saleor 3.24.
+  """
+  productFavorites("Anonymous favorites token." token: UUID!): [ProductFavorite!]
+
+  """
   List of the shop's staff users.
 
   Requires one of the following permissions: MANAGE_STAFF.
@@ -3072,6 +3079,13 @@ type User implements Node & ObjectWithMetadata {
   Added in Saleor 3.24.
   """
   membership: UserMembershipInfo
+
+  """
+  Products favorited by the user, newest first. Limited to 100 entries. Requires one of the following permissions: MANAGE_USERS, OWNER.
+
+  Added in Saleor 3.24.
+  """
+  productFavorites: [ProductFavorite!]
 
   """
   List of stored payment sources. The field returns a list of payment sources stored for payment plugins.
@@ -17669,6 +17683,28 @@ type MembershipTier implements Node {
 }
 
 """
+Represents a customer's product favorite.
+
+Added in Saleor 3.24.
+"""
+type ProductFavorite implements Node {
+  """
+  ID of the product favorite.
+  """
+  id: ID!
+
+  """
+  Favorited product.
+  """
+  product: Product!
+
+  """
+  When the product was added to favorites.
+  """
+  createdAt: DateTime!
+}
+
+"""
 Represents a payment source stored for user in payment gateway, such as credit card.
 """
 type PaymentSource {
@@ -25218,6 +25254,29 @@ type Mutation {
   - ACCOUNT_DELETED (async): Account was deleted.
   """
   accountDelete("A one-time token required to remove account. Sent by email using AccountRequestDeletion mutation." token: String!): AccountDelete
+
+  """
+  Adds a product to the caller's favorites. Authenticated users favorite under their account. Anonymous callers must persist the returned token.
+
+  Added in Saleor 3.24.
+  """
+  productFavoriteAdd("ID of the product to favorite." productId: ID!, "Existing anonymous favorites token. When omitted for anonymous callers, a new token is generated." token: UUID): ProductFavoriteAdd
+
+  """
+  Removes a product from the caller's favorites.
+
+  Added in Saleor 3.24.
+  """
+  productFavoriteRemove("ID of the product to unfavorite." productId: ID!, "Anonymous favorites token required for unauthenticated callers." token: UUID): ProductFavoriteRemove
+
+  """
+  Merges anonymous token favorites into the authenticated user's account.
+
+  Added in Saleor 3.24. 
+
+  Requires one of the following permissions: AUTHENTICATED_USER.
+  """
+  productFavoritesMerge("Anonymous favorites token to merge into the logged-in account." token: UUID!): ProductFavoritesMerge
 
   """
   Creates user address. 
@@ -40138,6 +40197,151 @@ type AccountDelete {
   errors: [AccountError!]!
 
   user: User
+}
+
+"""
+Adds a product to the caller's favorites. Authenticated users favorite under their account. Anonymous callers must persist the returned token.
+
+Added in Saleor 3.24.
+"""
+type ProductFavoriteAdd {
+  """
+  Created product favorite.
+  """
+  favorite: ProductFavorite
+
+  """
+  Anonymous favorites token. Returned when the caller is not authenticated or when a new token was generated. Omitted for authenticated users.
+  """
+  token: UUID
+
+  errors: [ProductFavoriteAddError!]!
+}
+
+"""
+Represents errors related to adding a product favorite.
+
+Added in Saleor 3.24.
+"""
+type ProductFavoriteAddError {
+  """
+  Name of a field that caused the error. A value of `null` indicates that the error isn't associated with a particular field.
+  """
+  field: String
+
+  """
+  The error message.
+  """
+  message: String
+
+  """
+  The error code.
+  """
+  code: ProductFavoriteAddErrorCode!
+}
+
+enum ProductFavoriteAddErrorCode {
+  GRAPHQL_ERROR
+
+  INVALID
+
+  NOT_FOUND
+
+  REQUIRED
+}
+
+"""
+Removes a product from the caller's favorites.
+
+Added in Saleor 3.24.
+"""
+type ProductFavoriteRemove {
+  """
+  Removed product favorite, if it existed.
+  """
+  favorite: ProductFavorite
+
+  errors: [ProductFavoriteRemoveError!]!
+}
+
+"""
+Represents errors related to removing a product favorite.
+
+Added in Saleor 3.24.
+"""
+type ProductFavoriteRemoveError {
+  """
+  Name of a field that caused the error. A value of `null` indicates that the error isn't associated with a particular field.
+  """
+  field: String
+
+  """
+  The error message.
+  """
+  message: String
+
+  """
+  The error code.
+  """
+  code: ProductFavoriteRemoveErrorCode!
+}
+
+enum ProductFavoriteRemoveErrorCode {
+  GRAPHQL_ERROR
+
+  INVALID
+
+  NOT_FOUND
+
+  REQUIRED
+}
+
+"""
+Merges anonymous token favorites into the authenticated user's account.
+
+Added in Saleor 3.24. 
+
+Requires one of the following permissions: AUTHENTICATED_USER.
+"""
+type ProductFavoritesMerge {
+  """
+  Merged favorites for the authenticated user.
+  """
+  favorites: [ProductFavorite!]
+
+  errors: [ProductFavoritesMergeError!]!
+}
+
+"""
+Represents errors related to merging anonymous favorites.
+
+Added in Saleor 3.24.
+"""
+type ProductFavoritesMergeError {
+  """
+  Name of a field that caused the error. A value of `null` indicates that the error isn't associated with a particular field.
+  """
+  field: String
+
+  """
+  The error message.
+  """
+  message: String
+
+  """
+  The error code.
+  """
+  code: ProductFavoritesMergeErrorCode!
+}
+
+enum ProductFavoritesMergeErrorCode {
+  GRAPHQL_ERROR
+
+  INVALID
+
+  NOT_FOUND
+
+  REQUIRED
 }
 
 """

@@ -1,0 +1,9 @@
+mutation ProductFavoriteRemove($productId: ID!, $token: UUID) {
+  productFavoriteRemove(productId: $productId, token: $token) {
+    errors {
+      field
+      message
+      code
+    }
+  }
+}

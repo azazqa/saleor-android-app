@@ -20,11 +20,21 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.widthIn
+import com.bdf.saleor.core.model.Money
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -48,6 +58,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -119,8 +130,20 @@ fun ProductDetailScreen(
         bottomBar = {
             if (state.product != null) {
                 ProductDetailBottomBar(
+                    quantity = state.quantity,
+                    lineTotal = state.lineTotal,
+                    canDecrement = state.canDecrement,
+                    canIncrement = state.canIncrement,
+                    isOutOfStock = state.isOutOfStock,
                     addingToCart = state.addingToCart,
-                    canSubmit = !state.addingToCart && state.selectedVariant != null,
+                    canSubmit = !state.addingToCart &&
+                        state.selectedVariant != null &&
+                        !state.isOutOfStock,
+                    isFavorited = state.isFavorited,
+                    togglingFavorite = state.togglingFavorite,
+                    onDecrement = viewModel::decrementQuantity,
+                    onIncrement = viewModel::incrementQuantity,
+                    onToggleFavorite = viewModel::toggleFavorite,
                     onAddToCart = viewModel::addToCart,
                     onBuyNow = viewModel::buyNow,
                 )
@@ -388,12 +411,25 @@ private fun ProductDetailQaSection(message: String) {
 
 @Composable
 private fun ProductDetailBottomBar(
+    quantity: Int,
+    lineTotal: Money?,
+    canDecrement: Boolean,
+    canIncrement: Boolean,
+    isOutOfStock: Boolean,
     addingToCart: Boolean,
     canSubmit: Boolean,
+    isFavorited: Boolean,
+    togglingFavorite: Boolean,
+    onDecrement: () -> Unit,
+    onIncrement: () -> Unit,
+    onToggleFavorite: () -> Unit,
     onAddToCart: () -> Unit,
     onBuyNow: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
+    val favoriteLabel = stringResource(
+        if (isFavorited) R.string.favorite_remove else R.string.favorite_add,
+    )
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -404,23 +440,79 @@ private fun ProductDetailBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            QuantityStepper(
+                quantity = quantity,
+                canDecrement = canDecrement,
+                canIncrement = canIncrement,
+                enabled = !isOutOfStock && !addingToCart,
+                onDecrement = onDecrement,
+                onIncrement = onIncrement,
+            )
+            Column(horizontalAlignment = Alignment.End) {
+                if (isOutOfStock) {
+                    Text(
+                        text = stringResource(R.string.out_of_stock),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = colors.error,
+                        fontWeight = FontWeight.Bold,
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.line_total_label),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colors.onSurfaceVariant,
+                    )
+                    Text(
+                        text = lineTotal?.format().orEmpty(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.onSurface,
+                        modifier = Modifier.testTag("line_total"),
+                    )
+                }
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            IconButton(
+                onClick = onToggleFavorite,
+                enabled = !togglingFavorite,
+                modifier = Modifier
+                    .height(44.dp)
+                    .testTag("favorite_toggle"),
+            ) {
+                Icon(
+                    imageVector = if (isFavorited) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    contentDescription = favoriteLabel,
+                    tint = if (isFavorited) colors.error else colors.onSurfaceVariant,
+                )
+            }
             OutlinedButton(
                 onClick = onAddToCart,
                 enabled = canSubmit,
                 modifier = Modifier
                     .weight(1f)
-                    .height(54.dp)
+                    .height(44.dp)
                     .testTag("add_to_cart"),
                 shape = CircleShape,
+                contentPadding = PaddingValues(horizontal = 12.dp),
             ) {
                 Text(
                     text = stringResource(R.string.add_to_cart),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             Button(
@@ -428,9 +520,10 @@ private fun ProductDetailBottomBar(
                 enabled = canSubmit && !addingToCart,
                 modifier = Modifier
                     .weight(1f)
-                    .height(54.dp)
+                    .height(44.dp)
                     .testTag("buy_now"),
                 shape = CircleShape,
+                contentPadding = PaddingValues(horizontal = 12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colors.primary,
                     contentColor = colors.onPrimary,
@@ -438,10 +531,68 @@ private fun ProductDetailBottomBar(
             ) {
                 Text(
                     text = stringResource(R.string.buy_now),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun QuantityStepper(
+    quantity: Int,
+    canDecrement: Boolean,
+    canIncrement: Boolean,
+    enabled: Boolean,
+    onDecrement: () -> Unit,
+    onIncrement: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier
+            .border(1.dp, colors.outlineVariant, MaterialTheme.shapes.medium)
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+            .testTag("quantity_stepper"),
+    ) {
+        Text(
+            text = stringResource(R.string.quantity_label),
+            style = MaterialTheme.typography.labelLarge,
+            color = colors.onSurfaceVariant,
+            modifier = Modifier.padding(start = 8.dp, end = 4.dp),
+        )
+        IconButton(
+            onClick = onDecrement,
+            enabled = enabled && canDecrement,
+            modifier = Modifier.testTag("quantity_decrement"),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Remove,
+                contentDescription = stringResource(R.string.quantity_decrease),
+            )
+        }
+        Text(
+            text = quantity.toString(),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .widthIn(min = 28.dp)
+                .testTag("quantity_value"),
+        )
+        IconButton(
+            onClick = onIncrement,
+            enabled = enabled && canIncrement,
+            modifier = Modifier.testTag("quantity_increment"),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = stringResource(R.string.quantity_increase),
+            )
         }
     }
 }

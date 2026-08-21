@@ -42,4 +42,7 @@ data object Cart : NavKey
 data object Checkout : NavKey
 
 @Serializable
+data object Favorites : NavKey
+
+@Serializable
 data class CheckoutComplete(val orderId: String, val orderNumber: String = "") : NavKey

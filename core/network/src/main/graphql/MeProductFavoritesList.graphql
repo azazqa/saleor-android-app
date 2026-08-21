@@ -1,0 +1,11 @@
+query MeProductFavoritesList {
+  me {
+    productFavorites {
+      id
+      product {
+        id
+        slug
+      }
+    }
+  }
+}

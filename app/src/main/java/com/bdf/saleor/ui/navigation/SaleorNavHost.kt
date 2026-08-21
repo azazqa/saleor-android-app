@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
@@ -72,6 +74,7 @@ import com.bdf.saleor.core.designsystem.components.StorefrontTopBar
 import com.bdf.saleor.core.designsystem.components.rememberBottomNavScrollConnection
 import com.bdf.saleor.feature.catalog.detail.ProductDetailScreen
 import com.bdf.saleor.feature.catalog.detail.ProductDetailViewModel
+import com.bdf.saleor.feature.catalog.favorites.FavoritesScreen
 import com.bdf.saleor.feature.checkout.cart.CartRoute
 import com.bdf.saleor.feature.checkout.checkout.CheckoutCompleteScreen
 import com.bdf.saleor.feature.checkout.checkout.CheckoutRoute
@@ -89,6 +92,7 @@ private enum class TopLevelDestination(
     HOME(Home, R.string.nav_home, Icons.Outlined.Home, Icons.Filled.Home, "nav_home"),
     CATEGORIES(Categories, R.string.nav_categories, Icons.Outlined.GridView, Icons.Filled.GridView, "nav_categories"),
     SEARCH(Search, R.string.nav_search, Icons.Outlined.Search, Icons.Filled.Search, "nav_search"),
+    FAVORITES(Favorites, R.string.nav_favorites, Icons.Outlined.FavoriteBorder, Icons.Filled.Favorite, "nav_favorites"),
     ACCOUNT(Account, R.string.nav_account, Icons.Outlined.Person, Icons.Filled.Person, "nav_account"),
 }
 
@@ -107,7 +111,7 @@ fun SaleorApp(
     var tabReselectTick by remember { mutableIntStateOf(0) }
     var bottomNavVisible by remember { mutableStateOf(true) }
     val hideBottomNavForRoute = when (current) {
-        is Home, is Categories, is Search, is Account,
+        is Home, is Categories, is Search, is Favorites, is Account,
         is Register, is ForgotPassword, is OrderDetail,
         is ProductDetail,
         -> false
@@ -116,6 +120,7 @@ fun SaleorApp(
     val topLevelScrollEnabled = current is Home ||
         current is Categories ||
         current is Search ||
+        current is Favorites ||
         current is Account
 
     LaunchedEffect(current) {
@@ -123,6 +128,7 @@ fun SaleorApp(
             is Home -> TopLevelDestination.HOME
             is Categories -> TopLevelDestination.CATEGORIES
             is Search -> TopLevelDestination.SEARCH
+            is Favorites -> TopLevelDestination.FAVORITES
             is Account, is Register, is ForgotPassword, is OrderDetail -> TopLevelDestination.ACCOUNT
             else -> null
         }
@@ -276,6 +282,19 @@ fun SaleorApp(
                                         onRegisterClick = { backStack.add(Register) },
                                         onForgotPasswordClick = { backStack.add(ForgotPassword) },
                                         onOrderClick = { order -> backStack.add(OrderDetail(order.id)) },
+                                    )
+                                }
+                            }
+                            entry<Favorites> {
+                                StorefrontTopLevel(
+                                    storeName = stringResource(R.string.app_name),
+                                    onStoreNameClick = { goTo(Home) },
+                                    onCartClick = openCart,
+                                    cartQuantity = cartQuantity,
+                                    nestedScrollConnection = bottomNavConnection,
+                                ) {
+                                    FavoritesScreen(
+                                        onProductClick = { product -> backStack.add(ProductDetail(product.slug)) },
                                     )
                                 }
                             }

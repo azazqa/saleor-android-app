@@ -12,7 +12,9 @@ import com.bdf.saleor.core.data.DefaultAuthRepository
 import com.bdf.saleor.core.data.DefaultCartRepository
 import com.bdf.saleor.core.data.DefaultCatalogRepository
 import com.bdf.saleor.core.data.DefaultCheckoutRepository
+import com.bdf.saleor.core.data.DefaultFavoritesRepository
 import com.bdf.saleor.core.data.DefaultOrderRepository
+import com.bdf.saleor.core.data.FavoritesRepository
 import com.bdf.saleor.core.data.OrderRepository
 import dagger.Binds
 import dagger.Module
@@ -46,6 +48,10 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindCheckoutRepository(impl: DefaultCheckoutRepository): CheckoutRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFavoritesRepository(impl: DefaultFavoritesRepository): FavoritesRepository
 
     @Binds
     @Singleton

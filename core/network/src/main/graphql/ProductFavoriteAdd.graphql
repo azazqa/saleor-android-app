@@ -1,0 +1,16 @@
+mutation ProductFavoriteAdd($productId: ID!, $token: UUID) {
+  productFavoriteAdd(productId: $productId, token: $token) {
+    favorite {
+      id
+      product {
+        id
+      }
+    }
+    token
+    errors {
+      field
+      message
+      code
+    }
+  }
+}

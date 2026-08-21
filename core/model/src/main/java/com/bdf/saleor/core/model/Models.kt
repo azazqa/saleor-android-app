@@ -55,11 +55,17 @@ data class VariantOption(
 data class ProductVariant(
     val id: String,
     val name: String,
-    val quantityAvailable: Int,
+    val quantityAvailable: Int?,
     val price: Money?,
     val mediaUrls: List<String>,
     val options: List<VariantOption>,
 )
+
+/** Clamp PDP quantity before checkoutLinesAdd (storefront parseCartQuantity parity). */
+fun parseCartQuantity(raw: Int, available: Int?): Int {
+    val quantity = if (raw < 1) 1 else raw
+    return if (available != null && available > 0) minOf(quantity, available) else quantity
+}
 
 data class ProductDetail(
     val id: String,

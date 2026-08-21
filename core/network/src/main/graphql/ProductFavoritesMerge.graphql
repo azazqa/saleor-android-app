@@ -1,0 +1,15 @@
+mutation ProductFavoritesMerge($token: UUID!) {
+  productFavoritesMerge(token: $token) {
+    favorites {
+      id
+      product {
+        id
+      }
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}

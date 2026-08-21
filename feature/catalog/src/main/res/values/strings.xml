@@ -25,4 +25,13 @@
     <string name="no_image">이미지 없음</string>
     <string name="clear">지우기</string>
     <string name="products_default_title">상품</string>
+    <string name="favorite_add">즐겨찾기 추가</string>
+    <string name="favorite_remove">즐겨찾기 해제</string>
+    <string name="favorites_title">즐겨찾기</string>
+    <string name="favorites_empty">아직 저장한 상품이 없습니다.</string>
+    <string name="quantity_label">수량</string>
+    <string name="quantity_decrease">수량 감소</string>
+    <string name="quantity_increase">수량 증가</string>
+    <string name="line_total_label">총 금액</string>
+    <string name="out_of_stock">품절</string>
 </resources>

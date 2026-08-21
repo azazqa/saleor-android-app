@@ -228,7 +228,7 @@ class DefaultCatalogRepository @Inject constructor(
                     ProductVariant(
                         id = it.id,
                         name = it.translation?.name ?: it.name,
-                        quantityAvailable = it.quantityAvailable ?: 0,
+                        quantityAvailable = it.quantityAvailable,
                         price = priceGross?.let { g -> Money(g.amount, g.currency) },
                         mediaUrls = it.media.orEmpty().mapNotNull { media -> media?.url },
                         options = it.selectionAttributes.flatMap { attr ->

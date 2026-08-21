@@ -17,6 +17,7 @@ class FakeCartRepository : CartRepository {
     var shouldFailAdd: Boolean = false
     var shouldFailUpdate: Boolean = false
     var lastAddedVariantId: String? = null
+    var lastAddedQuantity: Int? = null
     var refreshCount: Int = 0
     var clearCount: Int = 0
     var adoptLoggedInCount: Int = 0
@@ -28,6 +29,7 @@ class FakeCartRepository : CartRepository {
 
     override suspend fun addLine(variantId: String, quantity: Int): Result<Cart> {
         lastAddedVariantId = variantId
+        lastAddedQuantity = quantity
         if (shouldFailAdd) return Result.failure(IllegalStateException("add failed"))
         val current = _cart.value
         val lines = current?.lines.orEmpty().toMutableList()

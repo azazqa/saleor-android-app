@@ -7,7 +7,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.bdf.saleor.core.datastore.CheckoutStore
 import com.bdf.saleor.core.datastore.DataStoreCheckoutStore
+import com.bdf.saleor.core.datastore.DataStoreFavoritesTokenStore
 import com.bdf.saleor.core.datastore.DataStoreTokenStore
+import com.bdf.saleor.core.datastore.FavoritesTokenStore
 import com.bdf.saleor.core.datastore.TokenStore
 import dagger.Binds
 import dagger.Module
@@ -41,4 +43,8 @@ abstract class DatastoreBindsModule {
     @Binds
     @Singleton
     abstract fun bindCheckoutStore(impl: DataStoreCheckoutStore): CheckoutStore
+
+    @Binds
+    @Singleton
+    abstract fun bindFavoritesTokenStore(impl: DataStoreFavoritesTokenStore): FavoritesTokenStore
 }

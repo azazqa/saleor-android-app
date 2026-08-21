@@ -2,6 +2,7 @@
 
 import com.bdf.saleor.core.testing.fake.FakeCartRepository
 import com.bdf.saleor.core.testing.fake.FakeCatalogRepository
+import com.bdf.saleor.core.testing.fake.FakeFavoritesRepository
 import com.bdf.saleor.core.model.ProductCmsBlock
 import com.bdf.saleor.core.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,6 +25,7 @@ class ProductDetailViewModelTest {
         val viewModel = ProductDetailViewModel(
             repository = FakeCatalogRepository(),
             cartRepository = FakeCartRepository(),
+            favoritesRepository = FakeFavoritesRepository(),
             slug = "tea",
         )
 
@@ -50,6 +52,7 @@ class ProductDetailViewModelTest {
         val viewModel = ProductDetailViewModel(
             repository = repository,
             cartRepository = FakeCartRepository(),
+            favoritesRepository = FakeFavoritesRepository(),
             slug = "tea",
         )
         advanceUntilIdle()
@@ -64,6 +67,7 @@ class ProductDetailViewModelTest {
         val viewModel = ProductDetailViewModel(
             repository = FakeCatalogRepository(),
             cartRepository = FakeCartRepository(),
+            favoritesRepository = FakeFavoritesRepository(),
             slug = "tea",
         )
         advanceUntilIdle()
@@ -81,6 +85,7 @@ class ProductDetailViewModelTest {
         val viewModel = ProductDetailViewModel(
             repository = repository,
             cartRepository = FakeCartRepository(),
+            favoritesRepository = FakeFavoritesRepository(),
             slug = "missing",
         )
 
@@ -95,6 +100,7 @@ class ProductDetailViewModelTest {
         val viewModel = ProductDetailViewModel(
             repository = FakeCatalogRepository(),
             cartRepository = cart,
+            favoritesRepository = FakeFavoritesRepository(),
             slug = "tea",
         )
         advanceUntilIdle()
@@ -103,8 +109,71 @@ class ProductDetailViewModelTest {
         advanceUntilIdle()
 
         assertEquals("v1", cart.lastAddedVariantId)
+        assertEquals(1, cart.lastAddedQuantity)
         assertEquals("added", viewModel.uiState.value.addToCartMessage)
         assertEquals(1, cart.cart.value?.quantity)
+    }
+
+    @Test
+    fun quantity_defaultsToOne_andClampsToStock() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = ProductDetailViewModel(
+            repository = FakeCatalogRepository(),
+            cartRepository = FakeCartRepository(),
+            favoritesRepository = FakeFavoritesRepository(),
+            slug = "tea",
+        )
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.quantity)
+        assertFalse(viewModel.uiState.value.canDecrement)
+
+        viewModel.decrementQuantity()
+        assertEquals(1, viewModel.uiState.value.quantity)
+
+        repeat(10) { viewModel.incrementQuantity() }
+        // v1 stock is 5
+        assertEquals(5, viewModel.uiState.value.quantity)
+        assertFalse(viewModel.uiState.value.canIncrement)
+    }
+
+    @Test
+    fun selectVariant_resetsQuantityToOne() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = ProductDetailViewModel(
+            repository = FakeCatalogRepository(),
+            cartRepository = FakeCartRepository(),
+            favoritesRepository = FakeFavoritesRepository(),
+            slug = "tea",
+        )
+        advanceUntilIdle()
+
+        viewModel.incrementQuantity()
+        viewModel.incrementQuantity()
+        assertEquals(3, viewModel.uiState.value.quantity)
+
+        viewModel.selectVariant("v2")
+        assertEquals(1, viewModel.uiState.value.quantity)
+        assertEquals("v2", viewModel.uiState.value.selectedVariantId)
+    }
+
+    @Test
+    fun addToCart_sendsSelectedQuantity() = runTest(mainDispatcherRule.dispatcher) {
+        val cart = FakeCartRepository()
+        val viewModel = ProductDetailViewModel(
+            repository = FakeCatalogRepository(),
+            cartRepository = cart,
+            favoritesRepository = FakeFavoritesRepository(),
+            slug = "tea",
+        )
+        advanceUntilIdle()
+
+        viewModel.incrementQuantity()
+        viewModel.incrementQuantity()
+        viewModel.addToCart()
+        advanceUntilIdle()
+
+        assertEquals("v1", cart.lastAddedVariantId)
+        assertEquals(3, cart.lastAddedQuantity)
+        assertEquals(3, cart.cart.value?.quantity)
     }
 
     @Test
@@ -113,6 +182,7 @@ class ProductDetailViewModelTest {
         val viewModel = ProductDetailViewModel(
             repository = FakeCatalogRepository(),
             cartRepository = cart,
+            favoritesRepository = FakeFavoritesRepository(),
             slug = "tea",
         )
         advanceUntilIdle()
@@ -123,5 +193,25 @@ class ProductDetailViewModelTest {
         assertEquals("v1", cart.lastAddedVariantId)
         assertTrue(viewModel.uiState.value.buyNowReady)
         assertNull(viewModel.uiState.value.addToCartMessage)
+    }
+
+    @Test
+    fun toggleFavorite_updatesFavoritedState() = runTest(mainDispatcherRule.dispatcher) {
+        val favorites = FakeFavoritesRepository()
+        val viewModel = ProductDetailViewModel(
+            repository = FakeCatalogRepository(),
+            cartRepository = FakeCartRepository(),
+            favoritesRepository = favorites,
+            slug = "tea",
+        )
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isFavorited)
+
+        viewModel.toggleFavorite()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isFavorited)
+        assertEquals("p1", favorites.lastToggledProductId)
     }
 }

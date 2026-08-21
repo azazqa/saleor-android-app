@@ -1,0 +1,19 @@
+query ProductFavoritesIds($token: UUID!) {
+  productFavorites(token: $token) {
+    id
+    product {
+      id
+    }
+  }
+}
+
+query MeProductFavoritesIds {
+  me {
+    productFavorites {
+      id
+      product {
+        id
+      }
+    }
+  }
+}

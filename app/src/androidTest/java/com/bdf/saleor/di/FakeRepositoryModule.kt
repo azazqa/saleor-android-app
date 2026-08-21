@@ -11,7 +11,9 @@ import com.bdf.saleor.core.testing.fake.FakeAuthRepository
 import com.bdf.saleor.core.testing.fake.FakeCartRepository
 import com.bdf.saleor.core.testing.fake.FakeCatalogRepository
 import com.bdf.saleor.core.testing.fake.FakeCheckoutRepository
+import com.bdf.saleor.core.testing.fake.FakeFavoritesRepository
 import com.bdf.saleor.core.testing.fake.FakeOrderRepository
+import com.bdf.saleor.core.data.FavoritesRepository
 import com.bdf.saleor.core.data.OrderRepository
 import com.bdf.saleor.core.data.di.DataModule
 import dagger.Module
@@ -50,6 +52,10 @@ object FakeRepositoryModule {
     @Provides
     @Singleton
     fun provideCheckoutRepository(): CheckoutRepository = FakeCheckoutRepository()
+
+    @Provides
+    @Singleton
+    fun provideFavoritesRepository(): FavoritesRepository = FakeFavoritesRepository()
 
     @Provides
     @Singleton
