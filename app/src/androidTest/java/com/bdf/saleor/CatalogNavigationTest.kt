@@ -45,10 +45,11 @@ class CatalogNavigationTest {
             composeRule.onAllNodesWithTag("product_detail_screen").fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithTag("product_detail_name").assertIsDisplayed()
-        composeRule.onNodeWithTag("nav_home", useUnmergedTree = true).assertIsDisplayed()
-        composeRule.onNodeWithTag("nav_account", useUnmergedTree = true).assertIsDisplayed()
-        composeRule.onNodeWithTag("nav_home", useUnmergedTree = true).assertIsSelected()
-        composeRule.onNodeWithTag("nav_account", useUnmergedTree = true).assertIsNotSelected()
+        assertTrue(
+            composeRule.onAllNodesWithTag("nav_home", useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isEmpty(),
+        )
         composeRule.onNodeWithContentDescription("Back").performClick()
         composeRule.waitUntil(5_000) {
             composeRule.onAllNodesWithTag("home_screen").fetchSemanticsNodes().isNotEmpty()
@@ -136,13 +137,13 @@ class CatalogNavigationTest {
         composeRule.waitUntil(5_000) {
             composeRule.onAllNodesWithTag("product_detail_screen").fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithTag("add_to_cart").assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag("buy_with_options").assertIsDisplayed().performClick()
         composeRule.waitUntil(5_000) {
-            composeRule.onAllNodesWithTag("product_detail_cart_badge", useUnmergedTree = true)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
+            composeRule.onAllNodesWithTag("option_purchase_sheet").fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithText("장바구니 보기").performClick()
+        composeRule.onNodeWithTag("option_picker_trigger").assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag("option_picker_item_v1").assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag("sheet_buy_now").assertIsDisplayed().performClick()
         composeRule.waitUntil(10_000) {
             composeRule.onAllNodesWithTag("cart_screen").fetchSemanticsNodes().isNotEmpty()
         }

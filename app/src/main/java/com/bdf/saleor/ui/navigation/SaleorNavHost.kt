@@ -113,9 +113,16 @@ fun SaleorApp(
     val hideBottomNavForRoute = when (current) {
         is Home, is Categories, is Search, is Favorites, is Account,
         is Register, is ForgotPassword, is OrderDetail,
-        is ProductDetail,
         -> false
         else -> true
+    }
+    val contentWindowInsets = when {
+        // PDP action bar owns the bottom system inset (§6).
+        current is ProductDetail -> WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)
+        hideBottomNavForRoute -> WindowInsets.navigationBars.only(
+            WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+        )
+        else -> WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)
     }
     val topLevelScrollEnabled = current is Home ||
         current is Categories ||
@@ -164,13 +171,7 @@ fun SaleorApp(
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
-            contentWindowInsets = if (hideBottomNavForRoute) {
-                WindowInsets.navigationBars.only(
-                    WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
-                )
-            } else {
-                WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)
-            },
+            contentWindowInsets = contentWindowInsets,
         ) { innerPadding ->
             Column(
                 modifier = Modifier
@@ -326,6 +327,9 @@ fun SaleorApp(
                                             if (current !is Cart) backStack.add(Cart)
                                         },
                                         cartQuantity = cartQuantity,
+                                        onRelatedProductClick = { product ->
+                                            backStack.add(ProductDetail(product.slug))
+                                        },
                                     )
                                 }
                             }

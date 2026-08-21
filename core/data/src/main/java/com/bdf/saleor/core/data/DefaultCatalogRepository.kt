@@ -225,11 +225,13 @@ class DefaultCatalogRepository @Inject constructor(
             variants = product.variants.orEmpty().mapNotNull { variant ->
                 variant?.let {
                     val priceGross = it.pricing?.price?.gross
+                    val undiscountedGross = it.pricing?.priceUndiscounted?.gross
                     ProductVariant(
                         id = it.id,
                         name = it.translation?.name ?: it.name,
                         quantityAvailable = it.quantityAvailable,
                         price = priceGross?.let { g -> Money(g.amount, g.currency) },
+                        priceUndiscounted = undiscountedGross?.let { g -> Money(g.amount, g.currency) },
                         mediaUrls = it.media.orEmpty().mapNotNull { media -> media?.url },
                         options = it.selectionAttributes.flatMap { attr ->
                             val attribute = attr.attribute

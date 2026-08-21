@@ -57,6 +57,7 @@ data class ProductVariant(
     val name: String,
     val quantityAvailable: Int?,
     val price: Money?,
+    val priceUndiscounted: Money? = null,
     val mediaUrls: List<String>,
     val options: List<VariantOption>,
 )

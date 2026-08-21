@@ -25,7 +25,6 @@ import com.bdf.saleor.feature.catalog.R
 enum class ProductDetailSection {
     Summary,
     Detail,
-    Qa,
 }
 
 private data class ProductDetailSectionSpec(
@@ -36,17 +35,23 @@ private data class ProductDetailSectionSpec(
 
 private val ProductDetailSectionSpecs = listOf(
     ProductDetailSectionSpec(ProductDetailSection.Summary, R.string.tab_summary, "product_detail_tab_summary"),
-    ProductDetailSectionSpec(ProductDetailSection.Detail, R.string.tab_detail_description, "product_detail_tab_detail"),
-    ProductDetailSectionSpec(ProductDetailSection.Qa, R.string.tab_qa, "product_detail_tab_qa"),
+    ProductDetailSectionSpec(
+        ProductDetailSection.Detail,
+        R.string.tab_detail_description,
+        "product_detail_tab_detail",
+    ),
 )
 
 @Composable
 fun ProductDetailSectionTabs(
+    sections: List<ProductDetailSection>,
     selected: ProductDetailSection,
     onSelect: (ProductDetailSection) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (sections.isEmpty()) return
     val colors = MaterialTheme.colorScheme
+    val specs = ProductDetailSectionSpecs.filter { it.section in sections }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -58,7 +63,7 @@ fun ProductDetailSectionTabs(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Bottom,
         ) {
-            ProductDetailSectionSpecs.forEach { spec ->
+            specs.forEach { spec ->
                 ProductDetailSectionTab(
                     label = stringResource(spec.labelRes),
                     selected = spec.section == selected,
@@ -70,6 +75,25 @@ fun ProductDetailSectionTabs(
         }
         HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant)
     }
+}
+
+@Composable
+fun ProductDetailSectionTitle(
+    section: ProductDetailSection,
+    modifier: Modifier = Modifier,
+) {
+    val labelRes = when (section) {
+        ProductDetailSection.Summary -> R.string.tab_summary
+        ProductDetailSection.Detail -> R.string.tab_detail_description
+    }
+    Text(
+        text = stringResource(labelRes),
+        style = MaterialTheme.typography.titleMedium,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 16.dp)
+            .testTag("product_detail_section_title"),
+    )
 }
 
 @Composable
@@ -94,30 +118,15 @@ private fun ProductDetailSectionTab(
             style = MaterialTheme.typography.bodyLarge.copy(
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             ),
-            color = if (selected) colors.onBackground else colors.onSurfaceVariant,
+            color = if (selected) colors.primary else colors.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         Box(
             modifier = Modifier
                 .padding(top = 10.dp)
                 .fillMaxWidth()
-                .height(2.dp)
-                .background(if (selected) colors.onBackground else colors.background),
+                .height(3.dp)
+                .background(if (selected) colors.primary else colors.background),
         )
     }
-}
-
-internal object ProductDetailSectionIndices {
-    const val GALLERY = 0
-    const val BUY_BOX = 1
-    const val STICKY_TABS = 2
-    const val SUMMARY = 3
-    const val DETAIL = 4
-    const val QA = 5
-}
-
-internal fun ProductDetailSection.toLazyItemIndex(): Int = when (this) {
-    ProductDetailSection.Summary -> ProductDetailSectionIndices.SUMMARY
-    ProductDetailSection.Detail -> ProductDetailSectionIndices.DETAIL
-    ProductDetailSection.Qa -> ProductDetailSectionIndices.QA
 }

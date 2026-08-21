@@ -61,6 +61,12 @@ query ProductDetails($slug: String!, $channel: String!, $languageCode: LanguageC
             currency
           }
         }
+        priceUndiscounted {
+          gross {
+            amount
+            currency
+          }
+        }
       }
       selectionAttributes: attributes(variantSelection: VARIANT_SELECTION) {
         attribute {
